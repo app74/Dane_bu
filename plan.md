@@ -100,6 +100,14 @@ Akceptácia: lint, typové kontroly, všetky testy a produkčný build prejdú; 
 
 ## Priebežný denník rozhodnutí
 
+Rozšírenie na požiadanie používateľa (2026-09-22): vyhľadanie podľa IČO/DIČ z oficiálneho XML registra FS a doplnenie OÚD z exportu účtov platiteľov DPH. Presné spojenie cez IČO, kontrola IBAN, odmietnutie neaktuálneho exportu a nejednoznačných účtov. Pri chýbajúcich údajoch zostáva ručné zadanie. Bez automatizácie formulára chráneného CAPTCHA. Licencie a prevádzkové limity sú uvedené v README.
+
+Oprava duplicít (2026-09-23): opakované uloženie rovnakého subjektu vracia existujúci záznam (HTTP 200), tlačidlo sa počas požiadavky deaktivuje a backend chráni OÚD/IČO/DIČ/IČ DPH unikátnymi indexmi. Migrácia `0002_unique_subjects` zlúčila tri zhodné záznamy Neopublic a presmerovala ich platobnú históriu bez mazania auditných snapshotov. Konfliktné identifikátory vracajú HTTP 409.
+
+Oprava izolácie testov (2026-09-23): testy už používajú dočasnú SQLite databázu cez `backend/tests/conftest.py`; nesmú zapisovať do `backend/app.db`. Testovacie subjekty boli z aktívnej databázy odstránené, zostali iba Neopublic a CONSULTIA.
+
+Overenie rozšírenia: 43 backendových testov, Ruff, 5 frontendových testov, TypeScript/produkčný build, ESLint, Prettier s `--end-of-line auto` pre Windows checkout a nový Playwright scenár výberu/uloženia cez DIČ prešli. Testovacia databáza bola izolovaná; Playwright používal simulované API bez zápisu do používateľských dát. Reálny export bol overený vyhľadaním cez IČO aj DIČ so zhodným OÚD. Backend bol reštartovaný a `/health` vracia `ok`.
+
 Codex sem pri práci dopĺňa stručné datované záznamy, ktoré ovplyvňujú návrh alebo finančný výsledok.
 
 | Dátum | Rozhodnutie | Dôvod / zdroj |

@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 
@@ -47,8 +47,71 @@ def load_rules(path: Path) -> tuple[TaxRule, ...]:
                 data=raw,
             )
         )
-    validate_catalog(tuple(rules))
-    return tuple(rules)
+    expanded = _expand_2026_period_rules(rules)
+    validate_catalog(tuple(expanded))
+    return tuple(expanded)
+
+
+def _next_workday(value: date) -> date:
+    while value.weekday() >= 5:
+        value += timedelta(days=1)
+    return value
+
+
+def _expand_2026_period_rules(rules: list[TaxRule]) -> list[TaxRule]:
+    """Expand official recurring 2026 templates into selectable periods."""
+    result = list(rules)
+    for template in rules:
+        if template.status != "supported" or template.id not in {
+            "income-po-advance-2026-month-01", "income-po-advance-2026-quarter-01",
+            "vat-2026-month-03", "vat-2026-quarter-01",
+        }:
+            continue
+        is_month = template.data["period_type"] == "month"
+        periods = range(1, 13) if is_month else range(1, 5)
+        for period in periods:
+            rule_id = template.id[:-2] + f"{period:02d}"
+            if any(item.id == rule_id for item in result):
+                continue
+            if is_month:
+                start = date(2026, period, 1)
+                end = (
+                    date(2026, period + 1, 1) - timedelta(days=1)
+                    if period < 12
+                    else date(2026, 12, 31)
+                )
+                vs = f"1100{period:02d}2026"
+                due = _next_workday(end)
+                name_period = start.strftime("%B 2026")
+            else:
+                start_month = (period - 1) * 3 + 1
+                start = date(2026, start_month, 1)
+                end_month = start_month + 2
+                end = (
+                    date(2026, end_month + 1, 1) - timedelta(days=1)
+                    if end_month < 12
+                    else date(2026, 12, 31)
+                )
+                vs = f"1100{40 + period:02d}2026"
+                due = _next_workday(end)
+                name_period = ("I.", "II.", "III.", "IV.")[period - 1] + " štvrťrok 2026"
+            data = dict(template.data)
+            data.update(
+                {
+                    "id": rule_id,
+                    "name": f"{template.name.split('–')[0].strip()} – {name_period}",
+                    "valid_from": start.isoformat(),
+                    "valid_to": end.isoformat(),
+                    "vs": vs,
+                    "due_date": due.isoformat(),
+                }
+            )
+            result.append(TaxRule(
+                id=rule_id, name=data["name"], valid_from=start, valid_to=end,
+                status="supported", source_url=template.source_url,
+                last_verified=template.last_verified, data=data,
+            ))
+    return result
 
 
 def validate_catalog(rules: tuple[TaxRule, ...]) -> None:

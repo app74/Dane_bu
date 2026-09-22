@@ -13,7 +13,7 @@ def test_tax_rules_exposes_only_supported_rules() -> None:
     response = TestClient(app).get("/tax-rules")
     assert response.status_code == 200
     ids = {item["id"] for item in response.json()}
-    assert ids == {
+    assert {
         "income-return-2025",
         "income-fo-resident-2025",
             "income-fo-nonresident-2025",
@@ -23,7 +23,11 @@ def test_tax_rules_exposes_only_supported_rules() -> None:
             "motor-vehicle-return-2025",
         "vat-2026-month-03",
         "vat-2026-quarter-01",
-    }
+    }.issubset(ids)
+    assert len({item for item in ids if item.startswith("income-po-advance-2026-month-")}) == 12
+    assert len({item for item in ids if item.startswith("income-po-advance-2026-quarter-")}) == 4
+    assert len({item for item in ids if item.startswith("vat-2026-month-")}) == 12
+    assert len({item for item in ids if item.startswith("vat-2026-quarter-")}) == 4
     assert all("source_url" in item for item in response.json())
 
 def test_subject_crud_stores_oud_as_text() -> None:

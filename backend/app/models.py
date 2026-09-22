@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, String, Text
+from sqlalchemy import DateTime, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
@@ -8,6 +8,10 @@ from .db import Base
 
 class Subject(Base):
     __tablename__ = "subjects"
+    __table_args__ = tuple(
+        Index(f"uq_subjects_{field}", field, unique=True)
+        for field in ("oud", "ico", "dic", "ic_dph")
+    )
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
     oud: Mapped[str] = mapped_column(String(10))

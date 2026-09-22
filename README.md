@@ -1,6 +1,18 @@
 # Platobné údaje pre slovenské dane
 
-MVP aplikácie pripravuje platobné údaje; platby nevykonáva a OÚD získava iba ručne od používateľa alebo z lokálnej evidencie.
+MVP aplikácie pripravuje platobné údaje; platby nevykonáva. OÚD možno zadať ručne alebo doplniť zo zverejneného účtu správcu dane v oficiálnom exporte FS.
+
+## Vyhľadanie subjektu a OÚD
+
+Zadajte celé IČO (8 číslic) alebo DIČ (10 číslic), kliknite na **Vyhľadať subjekt** a vyberte výsledok podľa názvu a adresy. Aplikácia doplní dostupné identifikátory a OÚD. Skontrolujte údaje a kliknite na **Uložiť subjekt**.
+
+Názov a DIČ pochádzajú z registra subjektov registrovaných na daň z príjmov. Účet sa pripája cez presnú zhodu IČO s exportom účtov správcu dane pre platiteľov DPH. OÚD sa preberá z posledných 10 číslic overeného slovenského IBAN-u banky 8180 s predčíslím 500240; nikdy sa nepočíta z IČO alebo DIČ. Pri chýbajúcom IČO, chýbajúcom účte alebo nejednoznačných účtoch ostáva ručné zadanie. DIČ sa neodvodzuje z IČ DPH.
+
+Prvé vyhľadanie stiahne približne 65 MB a vytvorí lokálny index v dočasnom priečinku `dane-bu-fs-exports`. Ďalšie vyhľadania používajú index; exporty sa obnovujú po 24 hodinách. Export s dátumom starším než 3 dni sa odmietne. Potrebné je internetové pripojenie pri obnove. Identifikátor sa odosiela iba lokálnemu backendu v tele POST požiadavky, FS dostáva iba požiadavky na celé exporty.
+
+Zdroj a autor: [Finančné riaditeľstvo SR – exporty informačných zoznamov](https://www.financnasprava.sk/sk/danovi-a-colni-specialisti/technicke-informacie/podklady-pre-tvorcov-sw/exporty-informacnych-zoznamov). Register daňových subjektov je zverejnený pod CC0; export účtov pod **CC BY-NC-ND**, teda s obmedzením komerčného použitia. Táto integrácia nemení licenciu zdrojových dát. Na komerčné použitie treba zabezpečiť zodpovedajúce oprávnenie k dátam.
+
+Pri subjekte mimo exportu použite [ručné overenie OÚD na FS](https://www.financnasprava.sk/sk/elektronicke-sluzby/verejne-sluzby/overenie-prideleneho-oud). Aplikácia neautomatizuje tento formulár ani neobchádza CAPTCHA.
 
 ## Spustenie bez Dockeru
 
@@ -53,5 +65,7 @@ cd backend; python -m pytest; python -m ruff check .
 cd ..\frontend; npm run build; npm test; npm run lint; npm run format:check
 cd ..; npx playwright test
 ```
+
+Testy backendu používajú dočasnú izolovanú SQLite databázu a nemenia lokálnu databázu `backend/app.db`.
 
 E2E závislosť sa inštaluje z koreňa projektu (`npm install`).
