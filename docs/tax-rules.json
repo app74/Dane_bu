@@ -1,0 +1,107 @@
+{
+  "schema_version": "1",
+  "verified_on": "2026-09-22",
+  "rules": [
+    {
+      "id": "income-po-advance-2026-month-01", "name": "Preddavok DPPO – január 2026", "valid_from": "2026-01-01", "valid_to": "2026-01-31", "account_prefix": "500224", "vs": "1100012026", "due_date": "2026-02-02", "period_type": "month", "status": "supported", "source_url": "https://www.financnasprava.sk/_img/pfsedit/Dokumenty_PFS/Infoservis/Platenie_dani/2026/2025.12.16_VS_1Q_2026.pdf", "last_verified": "2026-09-22"
+    },
+    {
+      "id": "income-po-advance-2026-quarter-01", "name": "Preddavok DPPO – I. štvrťrok 2026", "valid_from": "2026-01-01", "valid_to": "2026-03-31", "account_prefix": "500224", "vs": "1100412026", "due_date": "2026-03-31", "period_type": "quarter", "status": "supported", "source_url": "https://www.financnasprava.sk/_img/pfsedit/Dokumenty_PFS/Infoservis/Platenie_dani/2026/2025.12.16_VS_1Q_2026.pdf", "last_verified": "2026-09-22"
+    },
+    {
+      "id": "income-fo-resident-2025", "name": "Daň z príjmov FO – rezident za rok 2025", "valid_from": "2025-01-01", "valid_to": "2025-12-31", "account_prefix": "500208", "vs": "1700992025", "due_date": "2026-03-31", "period_type": "year", "status": "supported", "source_url": "https://www.financnasprava.sk/_img/pfsedit/Dokumenty_PFS/Zverejnovanie_dok/Aktualne/DP/DPFO/2026/2026.01.13_005_FO_2026_IM.pdf", "last_verified": "2026-09-22"
+    },
+    {
+      "id": "income-fo-nonresident-2025", "name": "Daň z príjmov FO – nerezident za rok 2025", "valid_from": "2025-01-01", "valid_to": "2025-12-31", "account_prefix": "500216", "vs": "1700992025", "due_date": "2026-03-31", "period_type": "year", "status": "supported", "source_url": "https://www.financnasprava.sk/_img/pfsedit/Dokumenty_PFS/Zverejnovanie_dok/Aktualne/DP/DPFO/2026/2026.01.13_005_FO_2026_IM.pdf", "last_verified": "2026-09-22"
+    },
+    {
+      "id": "vat-2026-month-03",
+      "name": "DPH – marec 2026, mesačný platiteľ",
+      "valid_from": "2026-03-01",
+      "valid_to": "2026-03-31",
+      "account_prefix": "500240",
+      "vs": "1100032026",
+      "due_date": "2026-04-27",
+      "period_type": "month",
+      "status": "supported",
+      "source_url": "https://www.financnasprava.sk/_img/pfsedit/Dokumenty_PFS/Infoservis/Platenie_dani/2026/2026.03.24_VS_2Q_2026.pdf",
+      "last_verified": "2026-09-22"
+    },
+    {
+      "id": "vat-2026-quarter-01",
+      "name": "DPH – I. štvrťrok 2026, štvrťročný platiteľ",
+      "valid_from": "2026-01-01",
+      "valid_to": "2026-03-31",
+      "account_prefix": "500240",
+      "vs": "1100412026",
+      "due_date": "2026-04-27",
+      "period_type": "quarter",
+      "status": "supported",
+      "source_url": "https://www.financnasprava.sk/_img/pfsedit/Dokumenty_PFS/Infoservis/Platenie_dani/2026/2026.03.24_VS_2Q_2026.pdf",
+      "last_verified": "2026-09-22"
+    },
+    {
+      "id": "vat-2026-monthly",
+      "name": "DPH – mesačný platiteľ",
+      "valid_from": "2026-01-01",
+      "valid_to": null,
+      "account_prefix": "500240",
+      "vs_pattern": "1100MMYYYY",
+      "period_type": "month",
+      "status": "supported_only_when_official_period_list_confirms",
+      "source_url": "https://www.financnasprava.sk/sk/podnikatelia/dane/dan-z-pridanej-hodnoty/financne-vyrovnanie-dph",
+      "last_verified": "2026-09-22"
+    },
+    {
+      "id": "vat-2026-quarterly",
+      "name": "DPH – štvrťročný platiteľ",
+      "valid_from": "2026-01-01",
+      "valid_to": null,
+      "account_prefix": "500240",
+      "vs_pattern": "1100(40+quarter)YYYY",
+      "period_type": "quarter",
+      "status": "supported_only_when_official_period_list_confirms",
+      "source_url": "https://www.financnasprava.sk/_img/pfsedit/Dokumenty_PFS/Infoservis/Platenie_dani/2026/2025.12.16_VS_1Q_2026.pdf",
+      "last_verified": "2026-09-22"
+    },
+    {
+      "id": "income-return-2025",
+      "name": "Daň z príjmov z priznania za rok 2025",
+      "valid_from": "2025-01-01",
+      "valid_to": "2025-12-31",
+      "account_prefix_by_subject": {"domestic_company": "500224", "foreign_company": "500232"},
+      "vs": "1700992025",
+      "due_date": "2026-03-31",
+      "period_type": "year",
+      "status": "supported",
+      "source_url": "https://www.financnasprava.sk/_img/pfsedit/Dokumenty_PFS/Zverejnovanie_dok/Aktualne/DP/DPPO/2026/2026.01.15_001_PO_2026_IM_plat_dane.pdf",
+      "last_verified": "2026-09-22"
+    },
+    {
+      "id": "motor-vehicle-return-2025",
+      "name": "Daň z motorových vozidiel za rok 2025",
+      "valid_from": "2025-01-01",
+      "valid_to": "2025-12-31",
+      "account_prefix": "501163",
+      "vs": "1700992025",
+      "due_date": "2026-02-02",
+      "period_type": "year",
+      "status": "supported",
+      "source_url": "https://www.financnasprava.sk/_img/pfsedit/Dokumenty_PFS/Zverejnovanie_dok/Aktualne/Dan_z_MV/2026/2026.01.12_001_DMV_2026_IM.pdf",
+      "last_verified": "2026-09-22"
+    },
+    {
+      "id": "withholding-dividend-2026-05",
+      "name": "Zrážková daň z dividend vyplatených v máji 2026",
+      "valid_from": "2026-05-01",
+      "valid_to": "2026-05-31",
+      "account_prefix": "500267",
+      "vs": "1700052026",
+      "due_date": "2026-06-15",
+      "period_type": "month",
+      "status": "supported",
+      "source_url": "https://www.financnasprava.sk/_img/pfsedit/Dokumenty_PFS/Zverejnovanie_dok/Aktualne/DP/DPPO/2026/2026.01.15_006_PO_2026_IM_podiel_zisk.pdf",
+      "last_verified": "2026-09-22"
+    }
+  ]
+}

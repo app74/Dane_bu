@@ -1,0 +1,10 @@
+FROM python:3.12-slim
+WORKDIR /app
+ENV PYTHONPATH=/app
+COPY backend/pyproject.toml ./pyproject.toml
+RUN pip install --no-cache-dir ".[dev]"
+COPY backend/app ./app
+COPY backend/alembic.ini ./alembic.ini
+COPY backend/alembic ./alembic
+COPY docs /docs
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

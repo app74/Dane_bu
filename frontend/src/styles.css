@@ -1,0 +1,117 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #17202a;
+  background: #f5f7fa;
+}
+main {
+  max-width: 760px;
+  margin: 4rem auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+}
+.warning {
+  margin-top: 2rem;
+  padding: 1rem;
+  border-left: 4px solid #a15c00;
+  background: #fff3d6;
+}
+.inline-form,
+form {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+section {
+  margin-top: 2rem;
+}
+input,
+select,
+button {
+  font: inherit;
+  padding: 0.65rem;
+}
+button {
+  cursor: pointer;
+  background: #173f5f;
+  color: white;
+  border: 0;
+  border-radius: 6px;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: 3px solid #f2a900;
+  outline-offset: 2px;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+label {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.75rem 0;
+}
+dl {
+  display: grid;
+  grid-template-columns: 12rem 1fr;
+  gap: 0.5rem;
+}
+dt {
+  font-weight: 700;
+}
+dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.result {
+  border-top: 2px solid #173f5f;
+  padding-top: 1rem;
+}
+.error {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #ffe1e1;
+  border-left: 4px solid #a00;
+}
+.small-button {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+}
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.actions button:last-child {
+  background: #8b1e1e;
+}
+@media print {
+  body {
+    background: white;
+  }
+  main {
+    margin: 0;
+    box-shadow: none;
+  }
+  form,
+  .error,
+  h1 + p {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  main {
+    margin: 0;
+    padding: 1rem;
+    border-radius: 0;
+  }
+  dl {
+    grid-template-columns: 1fr;
+  }
+  dd {
+    margin-bottom: 0.5rem;
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "danove-platby",
+  "private": true,
+  "scripts": {"e2e": "playwright test"},
+  "devDependencies": {"@playwright/test": "latest"}
+}
