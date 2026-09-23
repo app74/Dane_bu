@@ -56,6 +56,23 @@ Produkčné súbory sú v `frontend\dist`. Pre trvalú prevádzku je vhodné ser
 
 ## 5. Prístup z bežného počítača
 
+Ak aplikáciu spustíte iba na adrese `127.0.0.1:5173`, bude dostupná len na serveri. Pre prístup z ostatných počítačov musí Vite počúvať na všetkých sieťových rozhraniach:
+
+```powershell
+cd C:\Apps\Dane_bu\frontend
+npm run dev -- --host 0.0.0.0
+```
+
+Rovnako musí backend počúvať na všetkých sieťových rozhraniach:
+
+```powershell
+cd C:\Apps\Dane_bu\backend
+.\.venv\Scripts\Activate.ps1
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+Adresa `127.0.0.1` označuje vždy aktuálny počítač. Adresa `0.0.0.0` znamená, že služba prijíma pripojenia aj zo siete. Používatelia preto otvárajú IP adresu servera, nie `127.0.0.1`.
+
 Na serveri spustite `ipconfig` a zistite IPv4 adresu, napríklad `192.168.1.50`. Na inom počítači otvorte:
 
 ```text
