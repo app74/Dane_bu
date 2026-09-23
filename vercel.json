@@ -1,0 +1,26 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "frontend": {
+      "root": "frontend/",
+      "framework": "vite",
+      "buildCommand": "VITE_API_URL=/api npm run build",
+      "outputDirectory": "dist"
+    },
+    "backend": {
+      "root": "backend/",
+      "framework": "fastapi",
+      "entrypoint": "vercel_app:app",
+      "buildCommand": "mkdir -p docs && cp ../docs/tax-rules.json docs/tax-rules.json",
+      "functions": {
+        "vercel_app.py": {
+          "excludeFiles": "{tests/**,.venv/**,**/*.db,.pytest_cache/**,.ruff_cache/**}"
+        }
+      }
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": { "service": "backend" } },
+    { "source": "/(.*)", "destination": { "service": "frontend" } }
+  ]
+}

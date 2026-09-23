@@ -11,3 +11,5 @@ frontend/dist/
 test-results/
 playwright-report/
 .env
+backend/docs/
+.vercel/

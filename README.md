@@ -56,6 +56,10 @@ Po úspešnom štarte otvorte aplikáciu na `http://localhost:5173`.
 Stav backendu overíte na `http://localhost:8000/health`. Bežiace kontajnery
 zastavíte príkazom `docker compose stop`; opätovný štart je `docker compose start`.
 
+## Vercel
+
+Aplikáciu možno nasadiť aj na Vercel (frontend na `/`, FastAPI na `/api`, databáza Neon Postgres). Postup, premenné prostredia, migrácie a kontrolu po nasadení opisuje [manual.md – kapitola 11](manual.md#11-nasadenie-na-vercel). Na Verceli je API chránené heslom (`APP_PASSWORD`, `SESSION_SECRET`) a vyhľadanie v exportoch FS je predvolene vypnuté (`FS_LOOKUP_ENABLED`). Lokálne spustenie bez hesla sa nemení.
+
 Zdroje pravidiel: [docs/rules-sources.md](docs/rules-sources.md). Číselník: [docs/tax-rules.json](docs/tax-rules.json).
 
 Kontroly po inštalácii závislostí:

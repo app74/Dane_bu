@@ -1,6 +1,7 @@
 import csv
 import io
 import json
+import os
 from datetime import date
 from pathlib import Path
 
@@ -10,7 +11,8 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .db import Base, engine, get_db
+from . import auth
+from .db import IS_SQLITE, Base, engine, get_db
 from .domain.iban import domestic_account, slovak_iban, validate_iban
 from .domain.payment_symbols import validate_vs
 from .domain.tax_rules import UnsupportedTaxRule, load_rules, select_rule
@@ -24,17 +26,40 @@ from .schemas import (
     SubjectUpdate,
 )
 from .subject_identity import matching_subjects, same_subject
-from .subject_lookup import LookupUnavailable, lookup_subject
+from .subject_lookup import LookupUnavailable, fs_lookup_enabled, lookup_subject
+
+
+def cors_origins() -> list[str]:
+    """Local Vite origins plus e.g. CORS_ORIGINS=http://192.168.10.132:5173 for LAN access."""
+    extra = [o.strip().rstrip("/") for o in os.getenv("CORS_ORIGINS", "").split(",")]
+    return ["http://localhost:5173", "http://127.0.0.1:5173", *filter(None, extra)]
+
 
 app = FastAPI(title="Platobné údaje pre dane", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=cors_origins(),
     allow_methods=["*"],
     allow_headers=["*"],
 )
-RULES_PATH = Path(__file__).parents[2] / "docs" / "tax-rules.json"
-Base.metadata.create_all(bind=engine)
+auth.install(app)
+
+
+def rules_path() -> Path:
+    configured = os.getenv("TAX_RULES_PATH")
+    if configured:
+        return Path(configured)
+    here = Path(__file__).resolve()
+    # Repository/Docker layout first, then the copy made by the Vercel build step.
+    candidates = [here.parents[2] / "docs" / "tax-rules.json",
+                  here.parents[1] / "docs" / "tax-rules.json"]
+    return next((path for path in candidates if path.exists()), candidates[0])
+
+
+RULES_PATH = rules_path()
+if IS_SQLITE:
+    # Hosted Postgres is managed only by Alembic migrations.
+    Base.metadata.create_all(bind=engine)
 
 @app.get("/health")
 def health() -> dict[str, str]:
@@ -148,6 +173,12 @@ async def import_subjects(file: UploadFile, db: Session = Depends(get_db)) -> di
 
 @app.post("/subject-lookup")
 def subject_lookup(identifier: str = Body(embed=True, max_length=200)) -> dict:
+    if not fs_lookup_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Vyhľadanie v exportoch FS je v tomto nasadení vypnuté. "
+            "Zadajte OÚD ručne a overte ho na portáli Finančnej správy.",
+        )
     try:
         return lookup_subject(identifier)
     except ValueError as error:

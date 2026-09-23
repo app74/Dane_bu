@@ -98,6 +98,29 @@ Akceptácia: lint, typové kontroly, všetky testy a produkčný build prejdú; 
 - [ ] Administrácia číselníka s procesom dvojitého schválenia pravidiel.
 - [ ] Notifikácia pri blížiacej sa zmene alebo skončení platnosti pravidla.
 
+## 8. Nasadenie na Vercel (vercel.app)
+
+Cieľ: prevádzka tej istej aplikácie na Verceli bez zmeny lokálneho, Docker a Windows server nasadenia. Postup pre správcu je v `manual.md`, kapitola 11.
+
+- [x] Overiť aktuálnu dokumentáciu Vercelu (Python runtime, FastAPI, Services, limity funkcií, Deployment Protection, Fair Use) a Neon integrácie.
+- [x] `vercel.json` so službami `frontend` (Vite, `frontend/`) a `backend` (FastAPI, `backend/`); prepis `/api/*` na backend, ostatné na frontend.
+- [x] `backend/vercel_app.py` pripája API pod `/api`, lebo Services odovzdávajú pôvodnú cestu vrátane prefixu; OpenAPI/docs sú na Verceli vypnuté.
+- [x] Build backendu kopíruje `docs/tax-rules.json` do `backend/docs/` (gitignored); `RULES_PATH` hľadá repozitárové/Docker umiestnenie, potom kópiu, alebo `TAX_RULES_PATH`.
+- [x] Postgres: závislosť `psycopg[binary]`, normalizácia `postgres://` → `postgresql+psycopg://`, malý pool s `pool_pre_ping`.
+- [x] Alembic používa `DATABASE_URL` namiesto pevnej hodnoty v `alembic.ini`; `create_all` beží iba pre SQLite.
+- [x] Prístup: spoločné heslo `APP_PASSWORD` + `SESSION_SECRET`, podpísaná HttpOnly/Secure/SameSite=Strict cookie na 8 hodín, zmena hesla zneplatní relácie; na Verceli bez konfigurácie API vracia 503 (fail closed), verejný je iba `/health`.
+- [x] Frontend: `VITE_API_URL` (Vercel build `/api`, lokálne pôvodné `http://127.0.0.1:8000`), spoločný `apiFetch`, prihlasovacia obrazovka, odhlásenie, návrat na prihlásenie pri 401.
+- [x] Vyhľadanie v exportoch FS vypínateľné cez `FS_LOOKUP_ENABLED`; na Verceli predvolene vypnuté s hlásením o ručnom zadaní OÚD.
+- [x] Testy: backend (auth, `/api` mount, fail-closed, URL databázy, prepínač lookupu), frontend (prihlásenie, chybné heslo, vypršanie relácie, 503).
+- [x] Dokumentácia: `manual.md` kapitola 11, sekcia Vercel v README, premenné v `.env.example` (bez hodnôt).
+- [ ] Vytvoriť Vercel projekt (plán Pro – firemné použitie), Neon databázu v EÚ a nastaviť Environment Variables.
+- [ ] Spustiť `alembic upgrade head` proti Neon (priame pripojenie) – migrácia `0002_unique_subjects` zatiaľ nebola overená na živom Postgrese.
+- [ ] Prvé nasadenie a kontrola podľa `manual.md` 11.7; overiť, že build backendu vidí `../docs/tax-rules.json`.
+- [ ] Preniesť subjekty cez CSV export/import (najprv test na jednom riadku) a CSV súbor zmazať.
+- [ ] Voliteľne: rate limit pre `/api/auth/login` vo Vercel Firewall, samostatný Neon branch pre Preview, overenie limitov pred zapnutím `FS_LOOKUP_ENABLED`.
+
+Akceptácia: na `*.vercel.app` sa bez prihlásenia nedajú čítať ani meniť dáta, po prihlásení funguje hlavný scenár, dáta prežijú nové nasadenie a lokálne kontroly (pytest, Ruff, Vitest, build, ESLint, Playwright) prechádzajú.
+
 ## Priebežný denník rozhodnutí
 
 Rozšírenie na požiadanie používateľa (2026-09-22): vyhľadanie podľa IČO/DIČ z oficiálneho XML registra FS a doplnenie OÚD z exportu účtov platiteľov DPH. Presné spojenie cez IČO, kontrola IBAN, odmietnutie neaktuálneho exportu a nejednoznačných účtov. Pri chýbajúcich údajoch zostáva ručné zadanie. Bez automatizácie formulára chráneného CAPTCHA. Licencie a prevádzkové limity sú uvedené v README.
@@ -175,6 +198,16 @@ Codex sem pri práci dopĺňa stručné datované záznamy, ktoré ovplyvňujú 
 | 2026-09-22 | Záverečný Docker smoke: `/health` = `ok`, API poskytuje 9 pravidiel, frontend odpovedá HTTP 200 a oba kontajnery bežia. | Prostredie je pripravené na lokálne používanie MVP. |
 | 2026-09-22 | Pridaný frontendový Compose healthcheck na `127.0.0.1:5173`; prvá varianta s `localhost` odhalila IPv6 rozdiel v Alpine a bola opravená. Oba kontajnery sú `healthy`. | Healthcheck teraz overuje reálne IPv4 počúvanie Vite servera. |
 | 2026-09-22 | Po oprave frontendového healthchecku prešli Docker Playwright testy 3/3, backend health = `ok` a frontend odpovedá HTTP 200; oba kontajnery sú `healthy`. | Potvrdený čistý stav po recreate kontajnera. |
+| 2026-09-23 | Nasadenie na Vercel cez Vercel Services: frontend `/`, FastAPI `/api/*`; backend pripojený pod `/api` v `backend/vercel_app.py`. | Dokumentácia Vercel Services: služba dostáva pôvodnú cestu vrátane prefixu. Services sú Beta. |
+| 2026-09-23 | Na Verceli sa nepoužíva SQLite; databáza je Neon Postgres, schému spravuje iba Alembic nad `DATABASE_URL`. | Funkcie Vercelu nemajú trvalý disk. Rozhodnutie používateľa: Neon. |
+| 2026-09-23 | Prístup chráni aplikačné heslo (`APP_PASSWORD`, `SESSION_SECRET`); na Verceli bez nich API vracia 503. | Aplikácia dovtedy nemala autentifikáciu; verejná vercel.app adresa by sprístupnila OÚD. Rozhodnutie používateľa: heslo v aplikácii. |
+| 2026-09-23 | Vyhľadanie v exportoch FS je na Verceli predvolene vypnuté (`FS_LOOKUP_ENABLED`). | ~65 MB export a index na každej novej inštancii riskujú limit 300 s (Hobby). Rozhodnutie používateľa. |
+| 2026-09-23 | Firemné nasadenie vyžaduje plán Vercel Pro/Enterprise. | Vercel Fair Use Guidelines: Hobby iba na nekomerčné osobné použitie. |
+| 2026-09-23 | Overenie: backend 63 testov + Ruff, frontend 12 testov + build (aj s `VITE_API_URL=/api`) + ESLint, Playwright 4/4 proti lokálnemu backendu, Alembic na SQLite a offline SQL pre Postgres (0001). Prettier hlási iba pôvodný nesúlad v `src/main.test.tsx`. | Docker nebežal, živý Postgres a samotné nasadenie na Vercel zatiaľ neoverené. |
+| 2026-09-23 | Opravená poškodená diakritika v dvoch chybových hláškach frontendu (uloženie subjektu). | Znaky boli nahradené `?`; Vitest 12/12, ESLint a TypeScript po oprave prešli. |
+| 2026-09-23 | Sieťový prístup: backend číta doplnkové CORS adresy z `CORS_ORIGINS`; frontend bez `VITE_API_URL` volá backend na porte 8000 hostiteľa stránky, ručná úprava `main.tsx` z manuálu odpadá. Manuál doplnený o rezerváciu IP a obmedzenie firewallu na doménový profil. | Iné PC by inak dostali CORS chybu; lokálna verzia nemá prihlásenie, preto obmedziť sieť. Backend 64 testov, Vitest 12/12. |
+| 2026-09-23 | QR PAY by square sa generuje vo formáte 1.1.0 (`src/qr.ts`); meno príjemcu ostáva podľa rozhodnutia používateľa prázdne. | bysquare 4.0.1 vo formáte 1.2.0 prázdne meno odmieta (`Beneficiary name is required`), preto sa QR od commitu `dca2125` nezobrazoval. Nový test používa skutočnú knižnicu vrátane dekódovania; Vitest 14/14, overené aj v prehliadači. |
+| 2026-09-23 | `manual.md` doplnený o skúsenosti z lokálnej prevádzky: inštalácia mimo `.venv`, aktivácia v `cmd.exe`, spúšťanie backendu z priečinka `backend`, `CORS_ORIGINS` a pracovný priečinok pri automatickom štarte, lokálne zmeny pred `git pull`, kontrola QR v bankovej aplikácii, presnejší postup importu do Neon a nová kapitola 12 Riešenie problémov. | Problémy zistené pri spúšťaní `C:\Apps\Dane_bu` 2026-09-23. |
 
 ## Kontrolný zoznam pred označením MVP za hotové
 

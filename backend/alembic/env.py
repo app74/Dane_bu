@@ -1,7 +1,10 @@
 from alembic import context
-from app.db import Base
+from app.db import DATABASE_URL, Base
 
 config = context.config
+# DATABASE_URL (default sqlite:///./app.db) wins over alembic.ini, so the same
+# migrations run locally, in Docker and against the hosted Postgres database.
+config.set_main_option("sqlalchemy.url", DATABASE_URL.replace("%", "%%"))
 target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:

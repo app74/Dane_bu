@@ -2,6 +2,7 @@
 
 import io
 import json
+import os
 import re
 import sqlite3
 import tempfile
@@ -24,6 +25,14 @@ INDEX_LOCK = threading.Lock()
 
 class LookupUnavailable(Exception):
     pass
+
+
+def fs_lookup_enabled() -> bool:
+    """Off by default on Vercel: the ~65 MB export and index do not fit serverless limits."""
+    value = os.getenv("FS_LOOKUP_ENABLED")
+    if value is None:
+        return os.getenv("VERCEL") != "1"
+    return value.strip().lower() in {"1", "true", "yes"}
 
 
 def export_path(name: str) -> Path:

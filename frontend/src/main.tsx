@@ -1,7 +1,9 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import QRCode from "qrcode";
-import { CurrencyCode, encode as encodePay, PaymentOptions } from "bysquare/pay";
+import { apiFetch } from "./api";
+import { AuthGate } from "./auth";
+import { payBySquarePayload } from "./qr";
 import "./styles.css";
 
 type Subject = {
@@ -41,7 +43,6 @@ type Preview = {
   last_verified: string;
   warning: string;
 };
-const API = "http://127.0.0.1:8000";
 
 export function App() {
   const savingSubjectRef = useRef(false);
@@ -60,7 +61,7 @@ export function App() {
     setLookup(null);
     setLookupError("");
     try {
-      const response = await fetch(`${API}/subject-lookup`, {
+      const response = await apiFetch(`/subject-lookup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier: identifier.trim() }),
@@ -101,9 +102,9 @@ export function App() {
     [saved, setSaved] = useState(false);
   useEffect(() => {
     Promise.all([
-      fetch(`${API}/subjects`).then((r) => r.json()),
-      fetch(`${API}/tax-rules`).then((r) => r.json()),
-      fetch(`${API}/payment-instructions`).then((r) => r.json()),
+      apiFetch(`/subjects`).then((r) => r.json()),
+      apiFetch(`/tax-rules`).then((r) => r.json()),
+      apiFetch(`/payment-instructions`).then((r) => r.json()),
     ])
       .then(([s, r, h]) => {
         setSubjects(s);
@@ -112,7 +113,7 @@ export function App() {
         if (s[0]) setSubjectId(String(s[0].id));
         if (r[0]) setRuleId(r[0].id);
       })
-      .catch(() => setError("Backend nie je dostupný. Spustite FastAPI na porte 8000."));
+      .catch(() => setError("Backend nie je dostupný."));
   }, []);
   async function addSubject(e: FormEvent) {
     e.preventDefault();
@@ -122,7 +123,7 @@ export function App() {
     setError("");
     setSubjectNotice("");
     try {
-      const r = await fetch(`${API}/subjects`, {
+      const r = await apiFetch(`/subjects`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, oud, ico: ico || null, dic: dic || null, ic_dph: icDph }),
@@ -132,7 +133,7 @@ export function App() {
         setError(
           typeof data.detail === "string"
             ? data.detail
-            : "Skontrolujte n?zov a identifik?tory subjektu.",
+            : "Skontrolujte názov a identifikátory subjektu.",
         );
         return;
       }
@@ -150,14 +151,14 @@ export function App() {
       setDic("");
       setIcDph(null);
     } catch {
-      setError("Subjekt sa nepodarilo ulo?i?. Sk?ste znova.");
+      setError("Subjekt sa nepodarilo uložiť. Skúste znova.");
     } finally {
       savingSubjectRef.current = false;
       setSavingSubject(false);
     }
   }
   async function updateSubject() {
-    const r = await fetch(`${API}/subjects/${subjectId}`, {
+    const r = await apiFetch(`/subjects/${subjectId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, oud, ico: ico || null, dic: dic || null, ic_dph: icDph }),
@@ -170,7 +171,7 @@ export function App() {
     setSubjects((items) => items.map((item) => (item.id === updated.id ? updated : item)));
   }
   async function removeSubject() {
-    const r = await fetch(`${API}/subjects/${subjectId}`, { method: "DELETE" });
+    const r = await apiFetch(`/subjects/${subjectId}`, { method: "DELETE" });
     if (!r.ok) {
       setError("Subjekt sa nepodarilo odstrániť.");
       return;
@@ -183,7 +184,7 @@ export function App() {
   async function createPreview(e: FormEvent) {
     e.preventDefault();
     setError("");
-    const r = await fetch(`${API}/payment-instructions/preview`, {
+    const r = await apiFetch(`/payment-instructions/preview`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ subject_id: Number(subjectId), rule_id: ruleId, amount }),
@@ -197,7 +198,7 @@ export function App() {
     setSaved(false);
   }
   async function savePreview() {
-    const r = await fetch(`${API}/payment-instructions`, {
+    const r = await apiFetch(`/payment-instructions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ subject_id: Number(subjectId), rule_id: ruleId, amount }),
@@ -217,19 +218,7 @@ export function App() {
       return;
     }
     try {
-      const payload = encodePay({
-        payments: [
-          {
-            type: PaymentOptions.PaymentOrder,
-            amount: Number(preview.amount),
-            variableSymbol: preview.variable_symbol,
-            currencyCode: CurrencyCode.EUR,
-            beneficiary: { name: "" },
-            bankAccounts: [{ iban: preview.iban }],
-            paymentNote: preview.rule_name,
-          },
-        ],
-      });
+      const payload = payBySquarePayload(preview);
       QRCode.toDataURL(payload, { errorCorrectionLevel: "M", margin: 2 }).then((url) => {
         if (!cancelled) setQrDataUrl(url);
       });
@@ -585,4 +574,9 @@ export function App() {
   );
 }
 const root = document.getElementById("root");
-if (root) createRoot(root).render(<App />);
+if (root)
+  createRoot(root).render(
+    <AuthGate>
+      <App />
+    </AuthGate>,
+  );
