@@ -121,6 +121,27 @@ Cieľ: prevádzka tej istej aplikácie na Verceli bez zmeny lokálneho, Docker a
 
 Akceptácia: na `*.vercel.app` sa bez prihlásenia nedajú čítať ani meniť dáta, po prihlásení funguje hlavný scenár, dáta prežijú nové nasadenie a lokálne kontroly (pytest, Ruff, Vitest, build, ESLint, Playwright) prechádzajú.
 
+## 9. Nasadenie na Azure App Service
+
+Cieľ: prevádzka na Azure App Service (Linux, Python) popri lokálnej, Docker, Windows server a Vercel verzii. Postup pre správcu je v `manual.md`, kapitola 13.
+
+- [x] Overiť aktuálnu dokumentáciu Microsoft Learn: Python na App Service (Oryx build, startup, `/home`), App Service Authentication, hlavičky `X-MS-CLIENT-PRINCIPAL-*`, Microsoft Entra provider, príkazy `az webapp`.
+- [x] Rozhodnutia používateľa: SQLite v `/home/data`, prihlásenie Microsoft Entra ID (Easy Auth), vyhľadanie v exportoch FS zapnuté s cache v `/home`, test lokálne + skripty.
+- [x] `backend/azure_app.py`: API pod `/api`, zostavený frontend na rovnakej adrese (StaticFiles), `create_app()` pre testy.
+- [x] Prístup: na App Service (`WEBSITE_SITE_NAME`) bez `APP_PASSWORD` sa vyžaduje hlavička `X-MS-CLIENT-PRINCIPAL-ID`, bez nej 401 (fail closed); `/auth/status` vracia `provider` a meno používateľa; heslové prihlásenie je v režime Entra vypnuté.
+- [x] Frontend: odkaz „Prihlásiť sa účtom Microsoft“ (`/.auth/login/aad`), zobrazenie prihláseného používateľa a odhlásenie (`/.auth/logout`).
+- [x] `FS_CACHE_DIR` pre trvalú cache exportov FS; `azure/startup.sh` nastaví `DATA_DIR`, `DATABASE_URL`, `FS_CACHE_DIR`, spustí `alembic upgrade head` a Uvicorn s proxy hlavičkami.
+- [x] `azure/build_package.py`: ZIP s frontendom (`VITE_API_URL=/api`), backendom, číselníkom, `requirements.txt` (nie Poetry) a `startup.sh` s LF; `.gitattributes` vynucuje LF pre `*.sh`.
+- [x] `azure/deploy.ps1`: zostavenie, voliteľné vytvorenie resource group, Linux plánu a web app po potvrdení, HTTPS-only, TLS 1.2, startup, build automation, ZIP deploy.
+- [x] Testy: backend `tests/test_azure_deployment.py`, frontend testy Entra UI, Playwright `playwright.azure.config.ts` nad zostaveným balíkom (bez prihlásenia 401 a prihlasovací odkaz; s hlavičkami Entra hlavný scenár, QR, história, trvalosť po reload).
+- [x] Dokumentácia: `manual.md` kapitola 13 a riešenie problémov, sekcia Azure v README.
+- [ ] Nainštalovať Azure CLI, `az login`, vybrať subskripciu a overiť dostupnosť `PYTHON:3.12` (`az webapp list-runtimes --os linux`).
+- [ ] Spustiť `azure/deploy.ps1 -CreateResources` (platený plán B1, schválenie nákladov) a nastaviť Microsoft Entra ID podľa 13.4, prípadne *Assignment required*.
+- [ ] Skutočná kontrola na Azure podľa 13.9: Oryx build, štart `startup.sh`, Easy Auth hlavičky, POST požiadavky vs. CSRF ochrana Easy Auth, trvalosť `/home/data`, prvé vyhľadanie FS vs. časový limit požiadavky.
+- [ ] Rozhodnúť zálohovanie `/home/data/app.db` (App Service Backups podľa plánu alebo pravidelný CSV export).
+
+Akceptácia: na `*.azurewebsites.net` sa bez prihlásenia firemným účtom nedajú čítať ani meniť dáta, po prihlásení funguje hlavný scenár, dáta prežijú reštart a nové nasadenie a lokálne kontroly prechádzajú.
+
 ## Priebežný denník rozhodnutí
 
 Rozšírenie na požiadanie používateľa (2026-09-22): vyhľadanie podľa IČO/DIČ z oficiálneho XML registra FS a doplnenie OÚD z exportu účtov platiteľov DPH. Presné spojenie cez IČO, kontrola IBAN, odmietnutie neaktuálneho exportu a nejednoznačných účtov. Pri chýbajúcich údajoch zostáva ručné zadanie. Bez automatizácie formulára chráneného CAPTCHA. Licencie a prevádzkové limity sú uvedené v README.
@@ -208,6 +229,10 @@ Codex sem pri práci dopĺňa stručné datované záznamy, ktoré ovplyvňujú 
 | 2026-09-23 | Sieťový prístup: backend číta doplnkové CORS adresy z `CORS_ORIGINS`; frontend bez `VITE_API_URL` volá backend na porte 8000 hostiteľa stránky, ručná úprava `main.tsx` z manuálu odpadá. Manuál doplnený o rezerváciu IP a obmedzenie firewallu na doménový profil. | Iné PC by inak dostali CORS chybu; lokálna verzia nemá prihlásenie, preto obmedziť sieť. Backend 64 testov, Vitest 12/12. |
 | 2026-09-23 | QR PAY by square sa generuje vo formáte 1.1.0 (`src/qr.ts`); meno príjemcu ostáva podľa rozhodnutia používateľa prázdne. | bysquare 4.0.1 vo formáte 1.2.0 prázdne meno odmieta (`Beneficiary name is required`), preto sa QR od commitu `dca2125` nezobrazoval. Nový test používa skutočnú knižnicu vrátane dekódovania; Vitest 14/14, overené aj v prehliadači. |
 | 2026-09-23 | `manual.md` doplnený o skúsenosti z lokálnej prevádzky: inštalácia mimo `.venv`, aktivácia v `cmd.exe`, spúšťanie backendu z priečinka `backend`, `CORS_ORIGINS` a pracovný priečinok pri automatickom štarte, lokálne zmeny pred `git pull`, kontrola QR v bankovej aplikácii, presnejší postup importu do Neon a nová kapitola 12 Riešenie problémov. | Problémy zistené pri spúšťaní `C:\Apps\Dane_bu` 2026-09-23. |
+| 2026-09-23 | Azure: jedna App Service (Linux, Python) obsluhuje frontend aj API (`/api`) cez `backend/azure_app.py`; nasadenie ZIP balíkom s Oryx buildom (`requirements.txt`). | Microsoft Learn: Configure Linux Python apps (Oryx pri `pyproject.toml` bez `uv.lock` použije Poetry, preto `requirements.txt`). |
+| 2026-09-23 | Azure prístup: Microsoft Entra ID cez App Service Authentication; backend bez hlavičky `X-MS-CLIENT-PRINCIPAL-ID` vracia 401. | Microsoft Learn: hlavičky vkladá iba App Service, externé požiadavky ich nastaviť nemôžu. Rozhodnutie používateľa. |
+| 2026-09-23 | Azure dáta: SQLite v `/home/data` (jediný trvalý priečinok), iba jedna inštancia; migrácie pri štarte. Vyhľadanie FS zapnuté s cache v `/home/data/fs-exports`. | Rozhodnutie používateľa; pri viacerých inštanciách prejsť na PostgreSQL. |
+| 2026-09-23 | Overenie Azure: backend 73 testov + Ruff, frontend 16 testov + TypeScript + ESLint, `startup.sh` lokálne (migrácia na `0002`, 401/200 podľa hlavičky), Playwright Azure 3/3 nad zostaveným balíkom. Pôvodné lokálne E2E nespustené, lebo porty 8000/5173 obsadzovala používateľova inštalácia `C:\Apps` (reuseExistingServer by zapisoval do jej databázy). | Skutočné nasadenie do Azure čaká na Azure CLI, prihlásenie a schválenie nákladov. |
 
 ## Kontrolný zoznam pred označením MVP za hotové
 

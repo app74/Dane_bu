@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "./api";
-import { AuthGate } from "./auth";
+import { AuthGate, ENTRA_LOGIN_URL, ENTRA_LOGOUT_URL } from "./auth";
 
 function reply(status: number, body: unknown) {
   return Promise.resolve({ ok: status < 400, status, json: async () => body });
@@ -76,5 +76,40 @@ describe("prihlásenie", () => {
     );
     render(<AuthGate>obsah aplikácie</AuthGate>);
     expect(await screen.findByRole("alert")).toHaveTextContent("Nastavte APP_PASSWORD.");
+  });
+
+  it("na Azure ponúkne prihlásenie účtom Microsoft", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        reply(200, { enabled: true, authenticated: false, provider: "entra", user: null }),
+      ),
+    );
+    render(<AuthGate>obsah aplikácie</AuthGate>);
+    const link = await screen.findByRole("link", { name: "Prihlásiť sa účtom Microsoft" });
+    expect(link).toHaveAttribute("href", ENTRA_LOGIN_URL);
+    expect(screen.queryByLabelText("Heslo")).toBeNull();
+    expect(screen.queryByText("obsah aplikácie")).toBeNull();
+  });
+
+  it("po prihlásení cez Microsoft zobrazí používateľa a odhlásenie", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        reply(200, {
+          enabled: true,
+          authenticated: true,
+          provider: "entra",
+          user: "tester@example.com",
+        }),
+      ),
+    );
+    render(<AuthGate>obsah aplikácie</AuthGate>);
+    expect(await screen.findByText("obsah aplikácie")).toBeInTheDocument();
+    expect(screen.getByText("Prihlásený: tester@example.com")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Odhlásiť sa" })).toHaveAttribute(
+      "href",
+      ENTRA_LOGOUT_URL,
+    );
   });
 });

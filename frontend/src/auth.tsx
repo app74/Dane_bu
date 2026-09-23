@@ -2,9 +2,16 @@ import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { apiFetch, AUTH_REQUIRED_EVENT } from "./api";
 
 type State = "checking" | "open" | "signed-in" | "login" | "unavailable";
+type Provider = "password" | "entra";
+
+// Azure App Service authentication (Easy Auth) endpoints for Microsoft Entra ID.
+export const ENTRA_LOGIN_URL = "/.auth/login/aad?post_login_redirect_uri=/";
+export const ENTRA_LOGOUT_URL = "/.auth/logout?post_logout_redirect_uri=/";
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>("checking");
+  const [provider, setProvider] = useState<Provider>("password");
+  const [user, setUser] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -17,6 +24,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
           setMessage(typeof data.detail === "string" ? data.detail : "");
           setState("unavailable");
         } else if (r.ok && data.enabled === true) {
+          setProvider(data.provider === "entra" ? "entra" : "password");
+          setUser(typeof data.user === "string" ? data.user : "");
           setState(data.authenticated ? "signed-in" : "login");
         } else setState("open");
       })
@@ -68,6 +77,19 @@ export function AuthGate({ children }: { children: ReactNode }) {
         <p role="alert">{message || "Aplikácia nie je nakonfigurovaná."}</p>
       </main>
     );
+  if (state === "login" && provider === "entra")
+    return (
+      <main>
+        <h1>Platobné údaje pre dane</h1>
+        <p>Aplikácia je dostupná iba pre firemné účty Microsoft.</p>
+        <p>
+          <a className="button" href={ENTRA_LOGIN_URL}>
+            Prihlásiť sa účtom Microsoft
+          </a>
+        </p>
+        {message && <p role="alert">{message}</p>}
+      </main>
+    );
   if (state === "login")
     return (
       <main>
@@ -92,9 +114,16 @@ export function AuthGate({ children }: { children: ReactNode }) {
     <>
       {state === "signed-in" && (
         <div className="actions">
-          <button type="button" onClick={logout}>
-            Odhlásiť sa
-          </button>
+          {user && <span>Prihlásený: {user}</span>}
+          {provider === "entra" ? (
+            <a className="button" href={ENTRA_LOGOUT_URL}>
+              Odhlásiť sa
+            </a>
+          ) : (
+            <button type="button" onClick={logout}>
+              Odhlásiť sa
+            </button>
+          )}
         </div>
       )}
       {children}

@@ -18,7 +18,14 @@ from pathlib import Path
 from .domain.iban import validate_iban
 
 SOURCE = "https://www.financnasprava.sk/sk/danovi-a-colni-specialisti/technicke-informacie/podklady-pre-tvorcov-sw/exporty-informacnych-zoznamov"
-CACHE = Path(tempfile.gettempdir()) / "dane-bu-fs-exports"
+
+
+def cache_dir() -> Path:
+    """FS_CACHE_DIR keeps the downloaded exports and index across restarts (/home on Azure)."""
+    return Path(os.getenv("FS_CACHE_DIR") or Path(tempfile.gettempdir()) / "dane-bu-fs-exports")
+
+
+CACHE = cache_dir()
 LOCK = threading.Lock()
 INDEX_LOCK = threading.Lock()
 
@@ -37,7 +44,7 @@ def fs_lookup_enabled() -> bool:
 
 def export_path(name: str) -> Path:
     with LOCK:
-        CACHE.mkdir(exist_ok=True)
+        CACHE.mkdir(parents=True, exist_ok=True)
         path = CACHE / f"{name}.zip"
         if path.exists() and time.time() - path.stat().st_mtime < 86400:
             return path

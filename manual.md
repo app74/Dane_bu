@@ -266,3 +266,119 @@ Potom otvorte `http://127.0.0.1:8001/docs` a nahrajte CSV najprv cez `POST /subj
 | V konzole je adresa ako `:5173/$%7Bwindow.location...` | v staršej verzii bola adresa API v `main.tsx` zapísaná v úvodzovkách `"..."` namiesto spätných apostrofov `` `...` `` | aktualizujte na aktuálnu verziu (kapitola 9), ktorá úpravu `main.tsx` nepotrebuje |
 | Stránka sa na inom počítači neotvorí | Vite alebo backend počúvajú iba na tomto počítači, prípadne blokuje firewall | spúšťajte s `--host 0.0.0.0` (kapitola 5) a pridajte pravidlá firewallu (kapitola 6) |
 | QR kód sa nezobrazí | verzia pred opravou vytvárala QR vo formáte 1.2.0 s prázdnym menom príjemcu, ktorý knižnica odmietne | aktualizujte na aktuálnu verziu (kapitola 9) a obnovte stránku (Ctrl+F5) |
+| Stránka `…azurewebsites.net` zobrazuje predvolenú stránku Azure alebo „Service Unavailable“ | aplikácia sa ešte spúšťa, alebo sa nenainštalovali závislosti či nespustil `startup.sh` | počkajte pár minút a obnovte stránku; skontrolujte **Deployment Center → Logs** a **Log stream**, nastavenie `SCM_DO_BUILD_DURING_DEPLOYMENT=true` a Startup Command `sh startup.sh` (kapitola 13.3) |
+| Na Azure API vracia 401 aj po prihlásení | nie je nastavené alebo vynútené prihlásenie Microsoft Entra ID | nastavte kapitolu 13.4 (Require authentication) |
+
+## 13. Nasadenie na Azure App Service
+
+Aplikácia beží ako jedna **Azure App Service (Linux, Python)**. Frontend a API sú na rovnakej adrese `https://<app>.azurewebsites.net`, API pod `/api`. Prístup chráni prihlásenie **Microsoft Entra ID** (App Service Authentication, „Easy Auth“), teda firemné účty Microsoft 365. Dáta sú v SQLite v trvalom priečinku `/home/data`. Vstupný bod je `backend/azure_app.py`, štartovací skript `azure/startup.sh`, zostavenie balíka `azure/build_package.py` a nasadenie `azure/deploy.ps1`.
+
+### 13.1 Predpoklady a riziká
+
+- **Oprávnenia:** rola Contributor (alebo Owner) na subskripcii alebo resource group. Pre Entra ID treba právo vytvoriť App registration v tenante. Ak ho nemáte, požiadajte správcu Entra ID o registráciu (13.4, možnosť „existujúca registrácia“).
+- **Náklady:** plán `B1` je platený. Cenu overte v [Azure Pricing Calculator](https://azure.microsoft.com/pricing/calculator/) pred vytvorením prostriedkov.
+- **Citlivé údaje:** databáza obsahuje OÚD a identifikátory subjektov. Prístup majú všetci používatelia tenanta, ktorí prejdú prihlásením. Obmedzenie na vybraných ľudí je v 13.4.
+- **SQLite v `/home`:** `/home` je jediný trvalý priečinok App Service. Ostatné súbory sa pri reštarte stratia. SQLite je vhodná iba pre **jednu inštanciu**, plán nerozširujte na viac inštancií (scale out). Pri viacerých súčasných používateľoch alebo inštanciách prejdite na PostgreSQL (kód ho podporuje cez `DATABASE_URL`).
+- **Vyhľadanie v exportoch FS** je zapnuté. Exporty a index sa ukladajú do `/home/data/fs-exports` a prežijú reštart. Prvé vyhľadanie po nasadení sťahuje približne 65 MB a stavia index, takže môže trvať niekoľko minút. Ak ho Azure preruší časovým limitom požiadavky, vyhľadanie o pár minút zopakujte. Pre exporty platí licencia uvedená v README (CC BY-NC-ND pri exporte účtov).
+
+### 13.2 Azure CLI
+
+Inštalácia (PowerShell) a prihlásenie:
+
+```powershell
+winget install --exact --id Microsoft.AzureCLI
+az login
+az account show --output table
+```
+
+Ak máte viac subskripcií, vyberte správnu: `az account set --subscription "<názov alebo ID>"`. Dostupné verzie Pythonu overíte príkazom `az webapp list-runtimes --os linux`. Skript predvolene používa `PYTHON:3.12`, inú zadáte parametrom `-PythonVersion`.
+
+### 13.3 Prvé nasadenie
+
+Z koreňa repozitára, s aktivovaným `backend\.venv` alebo s Pythonom 3.11+ a Node.js v PATH:
+
+```powershell
+cd C:\Apps\Dane_bu
+.\azure\deploy.ps1 -ResourceGroup rg-dane-bu -AppName <jedinecne-meno> -CreateResources
+```
+
+Meno aplikácie musí byť v Azure jedinečné, lebo tvorí adresu `https://<jedinecne-meno>.azurewebsites.net`. Skript:
+
+1. zostaví balík `build\dane-bu-azure.zip` (`python azure\build_package.py`: frontend s `VITE_API_URL=/api`, backend, `docs/tax-rules.json`, `requirements.txt`, `startup.sh`),
+2. vypíše prostriedky, ktoré vytvorí, a čaká na potvrdenie `ano`,
+3. vytvorí resource group, Linux App Service plan a web app, zapne iba HTTPS a TLS 1.2, nastaví startup `sh startup.sh` a `SCM_DO_BUILD_DURING_DEPLOYMENT=true` (Azure pri nasadení nainštaluje `requirements.txt`),
+4. nahrá balík (`az webapp deploy --type zip`).
+
+Pri štarte `startup.sh` vytvorí `/home/data`, spustí migrácie `alembic upgrade head` a potom Uvicorn. Prvý štart po nasadení môže trvať niekoľko minút.
+
+Bez nastaveného prihlásenia Microsoft Entra ID aplikácia **nevydá žiadne dáta**. API vracia 401 a stránka ponúkne prihlásenie. Preto hneď pokračujte krokom 13.4.
+
+### 13.4 Prihlásenie Microsoft Entra ID
+
+Postup podľa [dokumentácie Microsoftu](https://learn.microsoft.com/azure/app-service/configure-authentication-provider-aad):
+
+1. Azure portál → web app → **Settings → Authentication → Add identity provider**.
+2. **Identity provider:** Microsoft. **Tenant:** Workforce configuration (current tenant).
+3. **App registration:** Create new app registration, názov napríklad `dane-bu`. **Supported account type:** Current tenant – Single tenant.
+4. **Restrict access:** Require authentication. **Unauthenticated requests:** HTTP 302 Found redirect. **Token store:** zapnutý.
+5. **Add**.
+
+Klientsky secret sa uloží ako nastavenie `MICROSOFT_PROVIDER_AUTHENTICATION_SECRET`. Nemeňte ho ručne a nezverejňujte ho.
+
+Pri rýchlom nastavení Azure použije starší issuer `https://sts.windows.net/...`. Microsoft odporúča upraviť ho v nastaveniach poskytovateľa na `https://login.microsoftonline.com/<tenant-id>/v2.0`.
+
+Predvolene sa môže prihlásiť **každý používateľ tenanta**. Obmedzenie na vybraných ľudí: Microsoft Entra admin center → **Enterprise applications** → `dane-bu` → **Properties** → *Assignment required* = Yes, potom v **Users and groups** priraďte používateľov alebo skupinu.
+
+Aplikácia overuje prihlásenie podľa hlavičky `X-MS-CLIENT-PRINCIPAL-ID`, ktorú do požiadavky vkladá iba App Service. Klient ju podvrhnúť nemôže. Na Azure **nenastavujte** `APP_PASSWORD`, inak sa aplikácia prepne na prihlásenie spoločným heslom.
+
+### 13.5 Nastavenia aplikácie (Environment variables)
+
+| Premenná | Hodnota | Poznámka |
+| --- | --- | --- |
+| `SCM_DO_BUILD_DURING_DEPLOYMENT` | `true` | nastaví skript; bez nej sa nenainštalujú závislosti |
+| `DATA_DIR` | predvolene `/home/data` | databáza `app.db` a cache exportov FS |
+| `DATABASE_URL` | predvolene `sqlite:////home/data/app.db` | pre PostgreSQL zadajte jeho connection string |
+| `FS_LOOKUP_ENABLED` | nenastavovať (zapnuté) alebo `false` | vypnutie vyhľadania v exportoch FS |
+
+### 13.6 Prenos existujúcich subjektov
+
+1. V pôvodnej inštalácii stiahnite **Exportovať subjekty CSV** alebo `http://localhost:8000/subjects.csv`.
+2. Prihláste sa do Azure aplikácie a otvorte `https://<app>.azurewebsites.net/api/docs`.
+3. CSV nahrajte najprv cez `POST /subjects/import/preview` (kontrola), potom cez `POST /subjects/import`. Najprv otestujte súbor s jedným riadkom.
+4. Súbor CSV obsahuje OÚD, po prenose ho zmažte. História platobných inštrukcií sa takto neprenáša.
+
+### 13.7 Aktualizácia
+
+```powershell
+cd C:\Apps\Dane_bu
+git pull origin main
+.\azure\deploy.ps1 -ResourceGroup rg-dane-bu -AppName <jedinecne-meno>
+```
+
+Bez `-CreateResources` skript iba zostaví a nahrá nový balík. Migrácie databázy sa spustia automaticky pri štarte. Pred aktualizáciou si zálohujte dáta (13.8).
+
+### 13.8 Zálohy
+
+Databáza je súbor `/home/data/app.db`. Priebežne si ukladajte **Exportovať subjekty CSV** na bezpečné miesto. Ak váš cenový plán podporuje zálohy App Service (**Settings → Backups**), zapnite ich. Dostupnosť pre plán `B1` overte v portáli. Kópiu súboru získate aj cez SSH (`az webapp ssh --resource-group <rg> --name <app>`), keď je aplikácia zastavená alebo bez aktívneho zápisu.
+
+### 13.9 Kontrola po nasadení
+
+1. `https://<app>.azurewebsites.net` presmeruje na prihlásenie Microsoft. Po prihlásení sa zobrazí „Prihlásený: <váš účet>“.
+2. V novom okne v režime inkognito bez prihlásenia sa dáta nezobrazia.
+3. Uloženie subjektu, náhľad, QR kód (naskenovaný bankovou aplikáciou), uloženie do histórie a export TXT fungujú.
+4. Údaje zostanú zachované po reštarte (**Overview → Restart**).
+5. **Vyhľadať subjekt** nájde subjekt podľa IČO. Prvé vyhľadanie môže trvať dlhšie (13.1).
+6. Pri uložení subjektu sledujte F12 → Network. POST požiadavka nesmie skončiť chybou, ktorú by spôsobila ochrana CSRF v App Service Authentication. Lokálne sa to overiť nedá.
+
+### 13.10 Lokálny test Azure balíka
+
+Balík sa dá otestovať lokálne ešte pred nasadením. Spustí sa tak, ako na App Service, s dočasnou databázou na porte 8010. Prihlásenie Entra ID nahrádzajú hlavičky, ktoré inak vkladá App Service:
+
+```powershell
+cd C:\Apps\Dane_bu
+backend\.venv\Scripts\Activate.ps1
+python azure\build_package.py
+npx.cmd playwright test --config=playwright.azure.config.ts
+```
+
+Test overí, že bez prihlásenia API nevydá dáta, a potom prejde hlavný scenár vrátane QR kódu, histórie a zachovania dát po obnovení stránky. Po každej zmene kódu balík znova zostavte, inak test beží so starou verziou.

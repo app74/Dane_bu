@@ -13,3 +13,4 @@ playwright-report/
 .env
 backend/docs/
 .vercel/
+build/

@@ -60,6 +60,10 @@ zastavíte príkazom `docker compose stop`; opätovný štart je `docker compose
 
 Aplikáciu možno nasadiť aj na Vercel (frontend na `/`, FastAPI na `/api`, databáza Neon Postgres). Postup, premenné prostredia, migrácie a kontrolu po nasadení opisuje [manual.md – kapitola 11](manual.md#11-nasadenie-na-vercel). Na Verceli je API chránené heslom (`APP_PASSWORD`, `SESSION_SECRET`) a vyhľadanie v exportoch FS je predvolene vypnuté (`FS_LOOKUP_ENABLED`). Lokálne spustenie bez hesla sa nemení.
 
+## Azure
+
+Nasadenie na Azure App Service (frontend aj API na jednej adrese, prihlásenie Microsoft Entra ID, SQLite v `/home/data`) opisuje [manual.md – kapitola 13](manual.md#13-nasadenie-na-azure-app-service). Balík zostaví `python azure/build_package.py`, nasadí ho `azure/deploy.ps1` a lokálny test balíka spustí `npx playwright test --config=playwright.azure.config.ts`.
+
 Zdroje pravidiel: [docs/rules-sources.md](docs/rules-sources.md). Číselník: [docs/tax-rules.json](docs/tax-rules.json).
 
 Kontroly po inštalácii závislostí:

@@ -41,6 +41,14 @@ button {
   border: 0;
   border-radius: 6px;
 }
+a.button {
+  display: inline-block;
+  padding: 0.65rem;
+  background: #173f5f;
+  color: white;
+  border-radius: 6px;
+  text-decoration: none;
+}
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,

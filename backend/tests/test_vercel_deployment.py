@@ -26,7 +26,9 @@ def test_local_api_stays_open_without_password(monkeypatch) -> None:
     monkeypatch.delenv("VERCEL", raising=False)
     client = TestClient(app)
     assert client.get("/subjects").status_code == 200
-    assert client.get("/auth/status").json() == {"enabled": False, "authenticated": True}
+    assert client.get("/auth/status").json() == {
+        "enabled": False, "authenticated": True, "provider": None, "user": None,
+    }
 
 
 def test_protected_api_requires_login(protected) -> None:
@@ -35,7 +37,9 @@ def test_protected_api_requires_login(protected) -> None:
     assert client.get("/subjects").status_code == 401
     assert client.get("/tax-rules").status_code == 401
     assert client.post("/subject-lookup", json={"identifier": "12345678"}).status_code == 401
-    assert client.get("/auth/status").json() == {"enabled": True, "authenticated": False}
+    status = client.get("/auth/status").json()
+    assert status["enabled"] is True and status["authenticated"] is False
+    assert status["provider"] == "password"
 
 
 def test_wrong_password_is_rejected(protected) -> None:
