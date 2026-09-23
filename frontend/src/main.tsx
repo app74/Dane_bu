@@ -224,7 +224,7 @@ export function App() {
             amount: Number(preview.amount),
             variableSymbol: preview.variable_symbol,
             currencyCode: CurrencyCode.EUR,
-            beneficiary: { name: preview.subject_name },
+            beneficiary: { name: "" },
             bankAccounts: [{ iban: preview.iban }],
             paymentNote: preview.rule_name,
           },

@@ -6,6 +6,19 @@ Tento manuál popisuje nasadenie aplikácie na Windows server bez Dockeru. Ostat
 
 Na serveri nainštalujte Python 3.12 alebo novší, Node.js 22 alebo novší a Git. Používateľské počítače potrebujú iba Chrome, Edge alebo Firefox.
 
+Na Windows overte Python príkazom `py --version`. Ak príkaz `python` hlási, že Python nebol nájdený, používajte `py`. Ak PowerShell blokuje súbory `npm.ps1` alebo `npx.ps1`, používajte `npm.cmd` a `npx.cmd`.
+
+Ak príkaz `python` nie je dostupný, ekvivalentné príkazy sú:
+
+```powershell
+py -m venv .venv
+py -m pip install -e .
+py -m alembic upgrade head
+py -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+Po aktivácii `.venv` možno namiesto `python` použiť aj `.\.venv\Scripts\python.exe`.
+
 ## 2. Stiahnutie projektu
 
 ```powershell
@@ -24,12 +37,15 @@ git pull origin main
 
 ```powershell
 cd C:\Apps\Dane_bu\backend
-python -m venv .venv
+py -m venv .venv
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
-pip install -e .
+python -m pip install -e .
 alembic upgrade head
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
+
+Ak aktiváciu blokuje bezpečnostná politika, použite priamo `.\.venv\Scripts\python.exe` namiesto aktivácie. Ak sa zobrazí chyba `10048`, port 8000 už používa iný proces. Overte ho príkazom `Get-NetTCPConnection -LocalPort 8000 -State Listen`; použite už bežiaci server, zastavte príslušný proces cez `Stop-Process -Id <PID>`, alebo zvoľte iný port.
 
 Kontrola: `http://localhost:8000/health`. Očakávaná odpoveď je `{"status":"ok"}`.
 
@@ -47,9 +63,9 @@ Vytvorenie frontendu:
 
 ```powershell
 cd C:\Apps\Dane_bu\frontend
-npm install
-npm run build
-npx vite preview --host 0.0.0.0 --port 5173
+npm.cmd install
+npm.cmd run build
+npx.cmd vite preview --host 0.0.0.0 --port 5173
 ```
 
 Produkčné súbory sú v `frontend\dist`. Pre trvalú prevádzku je vhodné servovať tento priečinok cez IIS alebo Nginx.
@@ -60,7 +76,7 @@ Ak aplikáciu spustíte iba na adrese `127.0.0.1:5173`, bude dostupná len na se
 
 ```powershell
 cd C:\Apps\Dane_bu\frontend
-npm run dev -- --host 0.0.0.0
+npm.cmd run dev -- --host 0.0.0.0
 ```
 
 Rovnako musí backend počúvať na všetkých sieťových rozhraniach:
@@ -128,8 +144,8 @@ cd backend
 pip install -e .
 alembic upgrade head
 cd ..\frontend
-npm install
-npm run build
+npm.cmd install
+npm.cmd run build
 ```
 
 Po aktualizácii reštartujte backend a frontendové služby.
