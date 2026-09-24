@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import { apiFetch } from "./api";
 import { AuthGate } from "./auth";
 import { payBySquarePayload } from "./qr";
+import { Settings } from "./settings";
 import "./styles.css";
 
 type Subject = {
@@ -38,6 +39,7 @@ type Preview = {
   amount: string;
   currency: string;
   due_date: string | null;
+  due_date_basis?: string | null;
   rule_name: string;
   source_url: string;
   last_verified: string;
@@ -504,7 +506,15 @@ export function App() {
             <dt>Suma</dt>
             <dd>{preview.amount} EUR</dd>
             <dt>Splatnosť</dt>
-            <dd>{formatDueDate(preview.due_date)}</dd>
+            <dd>
+              {formatDueDate(preview.due_date)}
+              {preview.due_date_basis && (
+                <>
+                  <br />
+                  <small>{preview.due_date_basis}</small>
+                </>
+              )}
+            </dd>
             <dt>Pravidlo</dt>
             <dd>{preview.rule_name}</dd>
           </dl>
@@ -570,6 +580,7 @@ export function App() {
           </ul>
         </section>
       )}
+      <Settings />
     </main>
   );
 }

@@ -142,6 +142,22 @@ Cieľ: prevádzka na Azure App Service (Linux, Python) popri lokálnej, Docker, 
 
 Akceptácia: na `*.azurewebsites.net` sa bez prihlásenia firemným účtom nedajú čítať ani meniť dáta, po prihlásení funguje hlavný scenár, dáta prežijú reštart a nové nasadenie a lokálne kontroly prechádzajú.
 
+## 10. Splatnosť podľa nastaviteľných pravidiel
+
+Požiadavka používateľa (2026-09-24): splatnosť DPH v kontrolnom náhľade a v texte e-mailu vždy k 25. dňu nasledujúceho mesiaca, pri sobote, nedeli alebo štátnom sviatku posun na prvý pracovný deň; tabuľka v nastaveniach na pravidlá pre rôzne druhy potvrdených pravidiel.
+
+- [x] Príčina chyby: automatické rozšírenie období 2026 v `domain/tax_rules.py` počítalo splatnosť DPH ako posledný deň obdobia (napr. DPH august 2026 → 31.8.2026) a sviatky ignorovalo; názov mesiaca bol po anglicky.
+- [x] Overenie: § 78 ods. 1 zákona č. 222/2004 Z.z. (do 25 dní po skončení obdobia); zákon č. 241/1993 Z.z. v znení 261/2025 Z.z. a Úrad vlády SR (dni pracovného pokoja).
+- [x] Čistá doménová služba `domain/due_dates.py`: typy `catalog`, `next_month_day`, `period_end`, posun na pracovný deň, výpočet Veľkej noci.
+- [x] Tabuľky `due_date_settings` a `public_holidays` (migrácia `0003_due_date_settings`, sviatky 2026–2028 iba potvrdené dni); predvolené pravidlá v `app/due_settings.py` (DPH 25. deň + posun, preddavky DPPO koniec obdobia + posun, ostatné podľa číselníka).
+- [x] API `/settings/due-dates` (zoznam, úprava, obnovenie predvoleného) a `/settings/holidays` (zoznam podľa roka, pridanie, odstránenie); náhľad vracia `due_date_basis`.
+- [x] UI sekcia „Nastavenia splatnosti“: tabuľka pravidiel a zoznam sviatkov; pod splatnosťou v náhľade sa zobrazuje použité pravidlo; slovenské názvy mesiacov.
+- [x] Testy: doménové (nezávislé kalendárne fakty vrátane zhody s FS 27.04.2026 a 02.02.2026), API a migrácia, frontend nastavenia, Playwright scenár DPH august/november/Q2, text e-mailu a zmena pravidla v nastaveniach.
+- [x] Dokumentácia: `manual.md` kapitola 14, `docs/rules-sources.md`.
+- [ ] Overiť presné znenie počítania lehôt v zákone č. 563/2009 Z.z. (daňový poriadok) a doplniť zdroj posunu.
+- [ ] Overiť a prípadne doplniť 1.9., 28.10., 17.11. (a 8.5., 15.9. pre roky po 2026) podľa aktuálneho znenia zákona č. 241/1993 Z.z.
+- [ ] Voliteľne: evidencia, kto a kedy zmenil nastavenie (dnes iba `updated_at`).
+
 ## Priebežný denník rozhodnutí
 
 Rozšírenie na požiadanie používateľa (2026-09-22): vyhľadanie podľa IČO/DIČ z oficiálneho XML registra FS a doplnenie OÚD z exportu účtov platiteľov DPH. Presné spojenie cez IČO, kontrola IBAN, odmietnutie neaktuálneho exportu a nejednoznačných účtov. Pri chýbajúcich údajoch zostáva ručné zadanie. Bez automatizácie formulára chráneného CAPTCHA. Licencie a prevádzkové limity sú uvedené v README.
@@ -233,6 +249,9 @@ Codex sem pri práci dopĺňa stručné datované záznamy, ktoré ovplyvňujú 
 | 2026-09-23 | Azure prístup: Microsoft Entra ID cez App Service Authentication; backend bez hlavičky `X-MS-CLIENT-PRINCIPAL-ID` vracia 401. | Microsoft Learn: hlavičky vkladá iba App Service, externé požiadavky ich nastaviť nemôžu. Rozhodnutie používateľa. |
 | 2026-09-23 | Azure dáta: SQLite v `/home/data` (jediný trvalý priečinok), iba jedna inštancia; migrácie pri štarte. Vyhľadanie FS zapnuté s cache v `/home/data/fs-exports`. | Rozhodnutie používateľa; pri viacerých inštanciách prejsť na PostgreSQL. |
 | 2026-09-23 | Overenie Azure: backend 73 testov + Ruff, frontend 16 testov + TypeScript + ESLint, `startup.sh` lokálne (migrácia na `0002`, 401/200 podľa hlavičky), Playwright Azure 3/3 nad zostaveným balíkom. Pôvodné lokálne E2E nespustené, lebo porty 8000/5173 obsadzovala používateľova inštalácia `C:\Apps` (reuseExistingServer by zapisoval do jej databázy). | Skutočné nasadenie do Azure čaká na Azure CLI, prihlásenie a schválenie nákladov. |
+| 2026-09-24 | Splatnosť DPH: 25. deň mesiaca po skončení obdobia s posunom na najbližší pracovný deň (sobota, nedeľa, deň zo zoznamu sviatkov); nastaviteľné pre každú skupinu pravidiel v UI. | Požiadavka používateľa; § 78 ods. 1 zákona č. 222/2004 Z.z. Pôvodný výpočet dával koniec obdobia (DPH august 2026 → 31.8.2026). |
+| 2026-09-24 | Predvolené sviatky obsahujú iba dni, v ktorých sa zhodujú zákon č. 241/1993 Z.z. (po 261/2025) a Úrad vlády SR; sporné 1.9., 28.10., 17.11., 8.5., 15.9. vynechané, doplniteľné v nastaveniach. | Zhrnutia zdrojov si protirečili; na 25. deň nepripadajú. |
+| 2026-09-24 | Overenie: backend 99 testov + Ruff, frontend 18 testov + TypeScript + ESLint, Playwright Azure 4/4 (vrátane DPH august → 25.9.2026, november → 28.12.2026, Q2 → 27.7.2026, e-mail a zmena pravidla). | Pôvodné lokálne E2E nespustené kvôli obsadeným portom 8000/5173 inštaláciou `C:\Apps`, ak beží. |
 
 ## Kontrolný zoznam pred označením MVP za hotové
 

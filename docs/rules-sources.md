@@ -32,6 +32,17 @@ nesmú spätne prepísať, ale musí vzniknúť nová verzia.
 
 Zdroje pre konkrétne potvrdenia: [VS I. štvrťrok 2026](https://www.financnasprava.sk/_img/pfsedit/Dokumenty_PFS/Infoservis/Platenie_dani/2026/2025.12.16_VS_1Q_2026.pdf), [DPH – finančné vyrovnanie](https://www.financnasprava.sk/sk/podnikatelia/dane/dan-z-pridanej-hodnoty/financne-vyrovnanie-dph), [informácia k DPPO 2025](https://www.financnasprava.sk/_img/pfsedit/Dokumenty_PFS/Zverejnovanie_dok/Aktualne/DP/DPPO/2026/2026.01.15_001_PO_2026_IM_plat_dane.pdf), [informácia k DMV 2025](https://www.financnasprava.sk/_img/pfsedit/Dokumenty_PFS/Zverejnovanie_dok/Aktualne/Dan_z_MV/2026/2026.01.12_001_DMV_2026_IM.pdf), [informácia k zrážkovej dani z dividend 2026](https://www.financnasprava.sk/_img/pfsedit/Dokumenty_PFS/Zverejnovanie_dok/Aktualne/DP/DPPO/2026/2026.01.15_006_PO_2026_IM_podiel_zisk.pdf).
 
+## Splatnosť (nastaviteľné pravidlá)
+
+Splatnosť v náhľade sa počíta podľa `app/due_settings.py` a nastavení v UI (manual.md, kapitola 14):
+
+| Skupina | Pravidlo | Zdroj / overenie |
+| --- | --- | --- |
+| DPH mesačne a štvrťročne | 25. deň mesiaca po skončení obdobia, posun na najbližší pracovný deň | § 78 ods. 1 zákona č. 222/2004 Z.z. ([Slov-Lex](https://www.slov-lex.sk/ezbierky/pravne-predpisy/SK/ZZ/2004/222/)), overené 2026-09-24; posun podľa požiadavky používateľa, znenie daňového poriadku neoverené |
+| Preddavky DPPO | posledný deň obdobia, posun na pracovný deň | zhoda s oficiálnym zoznamom VS (02.02.2026 za január 2026) |
+| Ostatné potvrdené pravidlá | dátum z číselníka | konkrétna informácia FS SR v riadku pravidla |
+| Dni pracovného pokoja | tabuľka `public_holidays` | zákon č. 241/1993 Z.z. v znení 261/2025 Z.z. ([Slov-Lex](https://www.slov-lex.sk/ezbierky/pravne-predpisy/SK/ZZ/1993/241/)), [Úrad vlády SR](https://www.vlada.gov.sk/slovensko/statne-sviatky/), overené 2026-09-24 |
+
 ## Nepodporované alebo vyžadujúce doplnenie
 
 - Obdobia, pre ktoré oficiálny zoznam neuvádza presný VS a splatnosť.

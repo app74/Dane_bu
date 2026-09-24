@@ -41,6 +41,7 @@ class PaymentPreviewRead(BaseModel):
     iban_valid: bool
     variable_symbol: str
     due_date: str | None
+    due_date_basis: str | None = None
     source_url: str
     last_verified: str
     warning: str

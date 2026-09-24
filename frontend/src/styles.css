@@ -144,3 +144,21 @@ dd {
     margin-bottom: 0.5rem;
   }
 }
+
+.table-scroll {
+  overflow-x: auto;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+th,
+td {
+  border-bottom: 1px solid #d0d7de;
+  padding: 0.4rem;
+  text-align: left;
+  vertical-align: top;
+}
+summary h2 {
+  display: inline;
+}

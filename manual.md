@@ -163,7 +163,7 @@ Overte:
 1. `http://<server>:8000/health` vráti `{"status":"ok"}`.
 2. Aplikácia sa otvorí na serveri aj na inom počítači bez hlásenia „Backend nie je dostupný“.
 3. Vyhľadanie subjektu a uloženie bez duplicity fungujú.
-4. Po vytvorení náhľadu sa zobrazí QR kód PAY by square. Naskenujte ho bankovou aplikáciou, ktorú používate, a porovnajte IBAN, sumu a variabilný symbol s náhľadom. QR kód sa vytvára vo formáte PAY by square 1.1.0 bez mena príjemcu, lebo formát 1.2.0 meno príjemcu vyžaduje. Podpora staršieho formátu sa môže líšiť podľa banky.
+4. Pri DPH je splatnosť 25. deň nasledujúceho mesiaca, posunutá na pracovný deň (kapitola 14). Po vytvorení náhľadu sa zobrazí QR kód PAY by square. Naskenujte ho bankovou aplikáciou, ktorú používate, a porovnajte IBAN, sumu a variabilný symbol s náhľadom. QR kód sa vytvára vo formáte PAY by square 1.1.0 bez mena príjemcu, lebo formát 1.2.0 meno príjemcu vyžaduje. Podpora staršieho formátu sa môže líšiť podľa banky.
 5. Text e-mailu sa dá skopírovať.
 6. Údaje zostanú zachované po reštarte backendu.
 
@@ -382,3 +382,56 @@ npx.cmd playwright test --config=playwright.azure.config.ts
 ```
 
 Test overí, že bez prihlásenia API nevydá dáta, a potom prejde hlavný scenár vrátane QR kódu, histórie a zachovania dát po obnovení stránky. Po každej zmene kódu balík znova zostavte, inak test beží so starou verziou.
+
+## 14. Splatnosť a nastavenia
+
+Splatnosť v **Kontrolnom náhľade** a v **texte e-mailu** sa počíta podľa pravidla skupiny, do ktorej patrí vybrané potvrdené pravidlo. Pravidlá a zoznam sviatkov sa upravujú v sekcii **Nastavenia splatnosti** na konci stránky. Zmena sa prejaví v novom náhľade. Už uložená história sa nemení, lebo ukladá snapshot.
+
+### 14.1 Predvolené pravidlá
+
+| Skupina | Výpočet | Posun | Podklad |
+| --- | --- | --- | --- |
+| DPH – mesačný platiteľ | 25. deň mesiaca nasledujúceho po skončení obdobia | áno | § 78 ods. 1 zákona č. 222/2004 Z.z. (do 25 dní po skončení obdobia) |
+| DPH – štvrťročný platiteľ | 25. deň mesiaca nasledujúceho po skončení štvrťroka | áno | § 78 ods. 1 zákona č. 222/2004 Z.z. |
+| Preddavok DPPO – mesačný / štvrťročný | posledný deň obdobia | áno | oficiálny zoznam VS Finančnej správy SR |
+| Daň z príjmov z priznania, DMV, zrážková daň | dátum z oficiálneho číselníka `docs/tax-rules.json` | – | konkrétna informácia Finančnej správy SR |
+
+**Posun** znamená, že ak vypočítaný deň pripadne na sobotu, nedeľu alebo deň zo zoznamu sviatkov, splatnosť sa posunie na najbližší pracovný deň. Príklady: DPH za august 2026 je splatná 25.9.2026 (piatok), za september 2026 26.10.2026 (25.10. je nedeľa), za november 2026 28.12.2026 (25.12. a 26.12. sú sviatky, 27.12. nedeľa). Výsledok pre marec a I. štvrťrok 2026 (27.4.2026) sa zhoduje s oficiálnym zoznamom VS Finančnej správy SR.
+
+Pravidlo posunu zadal používateľ. Presné znenie ustanovenia o počítaní lehôt v daňovom poriadku (zákon č. 563/2009 Z.z.) sa pri implementácii nepodarilo automaticky overiť. Pred produkčným použitím ho overte.
+
+### 14.2 Úprava pravidla
+
+1. Otvorte **Nastavenia splatnosti**.
+2. V riadku skupiny zvoľte **Spôsob výpočtu**:
+   - *Podľa oficiálneho číselníka*: použije sa dátum z `docs/tax-rules.json`,
+   - *Deň nasledujúceho mesiaca*: zadajte **Deň** (1 až 31; ak ho mesiac nemá, použije sa jeho posledný deň),
+   - *Posledný deň obdobia*.
+3. Zapnite alebo vypnite **Posun na pracovný deň** a kliknite **Uložiť**.
+4. **Predvolené** vráti pravidlo skupiny na hodnotu z tabuľky 14.1.
+
+Pod výsledkom v kontrolnom náhľade sa zobrazí, podľa akého pravidla sa splatnosť vypočítala. Tento text sa ukladá aj do histórie.
+
+Nastavenia môže meniť každý, kto má prístup do aplikácie. Zmenu pravidla splatnosti preto vopred dohodnite a po zmene skontrolujte náhľad pre známe obdobie.
+
+### 14.3 Sviatky a dni pracovného pokoja
+
+Zoznam sa zobrazuje po rokoch (pole **Rok**). Deň pridáte zadaním dátumu a názvu (**Pridať sviatok**), tlačidlom **Odstrániť** ho vymažete.
+
+Migrácia `0003_due_date_settings` naplní roky 2026 až 2028 iba dňami, ktoré sú podľa zákona č. 241/1993 Z.z. (znenie po novele č. 261/2025 Z.z.) a Úradu vlády SR bez pochybností dňami pracovného pokoja: 1.1., 6.1., Veľký piatok, Veľkonočný pondelok, 1.5., 5.7., 29.8., 1.11., 24.12., 25.12., 26.12.
+
+**Nie sú zahrnuté:**
+- 8.5. a 15.9.: podľa § 4b v roku 2026 nie sú dňami pracovného pokoja,
+- 1.9., 28.10. a 17.11.: štátne sviatky, pri ktorých sa zdroje v otázke dňa pracovného pokoja nezhodovali.
+
+Pred použitím pre ďalšie roky overte aktuálne znenie zákona na [Slov-Lex](https://www.slov-lex.sk/ezbierky/pravne-predpisy/SK/ZZ/1993/241/) a zoznam doplňte. Na splatnosť DPH (25. deň) tieto dni nepripadajú.
+
+### 14.4 Aktualizácia existujúcej inštalácie
+
+Nové tabuľky vytvorí migrácia. Po `git pull` spustite v priečinku `backend`:
+
+```powershell
+python -m alembic upgrade head
+```
+
+Docker a Azure (`startup.sh`) spúšťajú migrácie automaticky. Pri Verceli ich spustite podľa kapitoly 11.2.

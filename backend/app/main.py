@@ -11,12 +11,14 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from . import auth
+from . import auth, settings_api
 from .db import IS_SQLITE, Base, engine, get_db
+from .domain.due_dates import compute_due_date
 from .domain.iban import domestic_account, slovak_iban, validate_iban
 from .domain.payment_symbols import validate_vs
 from .domain.tax_rules import UnsupportedTaxRule, load_rules, select_rule
 from .domain.values import EuroAmount
+from .due_settings import group_for, holiday_dates, load_rule
 from .models import PaymentInstruction, Subject
 from .schemas import (
     PaymentPreviewRead,
@@ -43,6 +45,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 auth.install(app)
+app.include_router(settings_api.router)
 
 
 def rules_path() -> Path:
@@ -279,6 +282,7 @@ def preview_payment(
         due_date = rule.data.get("due_date")
     else:
         raise HTTPException(status_code=422, detail="Pravidlo zatiaľ nemá bezpečný výpočet")
+    due_date, due_date_basis = resolve_due_date(rule, due_date, db)
     return PaymentPreviewRead(
         subject_id=subject.id,
         subject_name=subject.name,
@@ -292,6 +296,7 @@ def preview_payment(
         iban_valid=validate_iban(slovak_iban(prefix, subject.oud)),
         variable_symbol=variable_symbol,
         due_date=due_date,
+        due_date_basis=due_date_basis,
         source_url=rule.source_url,
         last_verified=rule.last_verified.isoformat(),
         warning=(
@@ -299,6 +304,22 @@ def preview_payment(
             "Finančnej správy SR."
         ),
     )
+
+
+def resolve_due_date(rule, catalog_due: str | None, db: Session) -> tuple[str | None, str | None]:
+    """Apply the due-date setting of the rule group (Nastavenia) to a confirmed rule."""
+    group = group_for(rule.id)
+    if group is None:
+        return catalog_due, None
+    due_rule = load_rule(db, group)
+    is_period = rule.data.get("period_type") in {"month", "quarter"}
+    due = compute_due_date(
+        due_rule,
+        rule.valid_to if is_period else None,
+        date.fromisoformat(catalog_due) if catalog_due else None,
+        holiday_dates(db),
+    )
+    return (due.isoformat() if due else None), due_rule.describe()
 
 
 @app.post(

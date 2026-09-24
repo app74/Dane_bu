@@ -52,6 +52,12 @@ def load_rules(path: Path) -> tuple[TaxRule, ...]:
     return tuple(expanded)
 
 
+MONTHS_SK = (
+    "január", "február", "marec", "apríl", "máj", "jún",
+    "júl", "august", "september", "október", "november", "december",
+)
+
+
 def _next_workday(value: date) -> date:
     while value.weekday() >= 5:
         value += timedelta(days=1)
@@ -82,7 +88,7 @@ def _expand_2026_period_rules(rules: list[TaxRule]) -> list[TaxRule]:
                 )
                 vs = f"1100{period:02d}2026"
                 due = _next_workday(end)
-                name_period = start.strftime("%B 2026")
+                name_period = f"{MONTHS_SK[period - 1]} 2026"
             else:
                 start_month = (period - 1) * 3 + 1
                 start = date(2026, start_month, 1)
