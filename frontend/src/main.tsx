@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import QRCode from "qrcode";
 import { apiFetch } from "./api";
+import { OudHelper } from "./oudHelper";
 import { AuthGate } from "./auth";
 import { payBySquarePayload } from "./qr";
 import { Settings } from "./settings";
@@ -372,21 +373,13 @@ export function App() {
             ))}
           </div>
         )}
-        <p>
-          <a
-            href="https://www.financnasprava.sk/sk/elektronicke-sluzby/verejne-sluzby/overenie-prideleneho-oud"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Overiť OÚD na portáli Finančnej správy
-          </a>
-        </p>
+        <OudHelper />
         <form onSubmit={addSubject} className="inline-form">
           <label>
             Daňový subjekt
             <input
               aria-label="Názov subjektu"
-              placeholder="Názov spoločnosti"
+              placeholder="Názov spoločnosti alebo meno a priezvisko"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />

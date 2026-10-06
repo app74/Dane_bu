@@ -1,6 +1,60 @@
 ﻿# Manuál nasadenia aplikácie
 
-Tento manuál popisuje nasadenie aplikácie na Windows server bez Dockeru. Ostatné počítače pristupujú k aplikácii cez webový prehliadač.
+Tento manuál popisuje nasadenie aplikácie na Windows server bez Dockeru. Ostatné počítače pristupujú k aplikácii cez webový prehliadač. Ak aplikáciu používate iba na vlastnom počítači, stačí kapitola **Rýchle spustenie na jednom počítači**.
+
+## Dôležité: aplikácia má dve časti
+
+Aplikácia sa skladá z dvoch programov, ktoré **musia bežať súčasne**:
+
+| Časť | Adresa | Spúšťa sa príkazom |
+| --- | --- | --- |
+| backend (údaje, vyhľadanie, výpočty) | `http://localhost:8000` | `uvicorn` |
+| frontend (stránka v prehliadači) | `http://localhost:5173` | `npm.cmd run dev` alebo `vite preview` |
+
+Príkazy `uvicorn` a `npm.cmd run dev` / `vite preview` obsadia okno PowerShellu a bežia, kým ich nezastavíte. Preto:
+
+- každú časť spustite **vo vlastnom okne PowerShellu**,
+- okno so spustenou časťou **nezatvárajte a nepíšte doň ďalšie príkazy**,
+- klávesy **Ctrl+C** alebo zatvorenie okna príslušnú časť zastavia.
+
+Ak beží iba frontend, stránka sa otvorí, ale vyhľadanie a uloženie subjektu skončia hlásením **„Failed to fetch“** alebo **„Backend nie je dostupný“**.
+
+## Rýchle spustenie na jednom počítači
+
+Príklady používajú priečinok `C:\Apps\Dane_bu`. Ak máte projekt inde (napríklad `C:\Users\<meno>\Dane_bu`), nahraďte cestu svojím priečinkom. Požiadavky sú v kapitole 1.
+
+**Prvá inštalácia** (iba raz, v ľubovoľnom okne PowerShellu):
+
+```powershell
+cd C:\Apps\Dane_bu\backend
+py -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e .
+cd ..\frontend
+npm.cmd install
+```
+
+**Okno 1 – backend:**
+
+```powershell
+cd C:\Apps\Dane_bu\backend
+.\.venv\Scripts\python.exe -m alembic upgrade head
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000
+```
+
+Počkajte na riadok `Application startup complete`. Okno nechajte otvorené. V prehliadači otvorte `http://localhost:8000/health`. Očakávaná odpoveď je `{"status":"ok"}`.
+
+**Okno 2 – frontend:** otvorte **nové** okno PowerShellu:
+
+```powershell
+cd C:\Apps\Dane_bu\frontend
+npm.cmd run dev
+```
+
+Okno nechajte otvorené a v prehliadači otvorte `http://localhost:5173`.
+
+Pri ďalšom spustení (napríklad po reštarte počítača) zopakujte iba okno 1 a okno 2. Prvá inštalácia sa neopakuje.
+
+Prvé vyhľadanie subjektu stiahne export Finančnej správy (približne 65 MB) a vytvorí index. Môže trvať niekoľko minút. Okno backendu počas neho nezatvárajte.
 
 ## 1. Požiadavky
 
@@ -8,18 +62,17 @@ Na serveri nainštalujte Python 3.12 alebo novší, Node.js 22 alebo novší a G
 
 Na Windows overte Python príkazom `py --version`. Ak príkaz `python` hlási, že Python nebol nájdený, používajte `py`. Ak PowerShell blokuje súbory `npm.ps1` alebo `npx.ps1`, používajte `npm.cmd` a `npx.cmd`.
 
-Ak príkaz `python` nie je dostupný, ekvivalentné príkazy sú:
+Virtuálne prostredie `.venv` sa vytvára v kapitole 3. Ak aktiváciu `.venv` blokuje bezpečnostná politika alebo príkazy `alembic` a `uvicorn` nie sú dostupné, spúšťajte ich cez Python z `.venv` (v priečinku `backend`):
 
 ```powershell
-py -m venv .venv
-py -m pip install -e .
-py -m alembic upgrade head
-py -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+.\.venv\Scripts\python.exe -m pip install -e .
+.\.venv\Scripts\python.exe -m alembic upgrade head
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-Po aktivácii `.venv` možno namiesto `python` použiť aj `.\.venv\Scripts\python.exe`.
+Príkazy `py -m pip install` bez `.venv` nepoužívajte, lebo nainštalujú balíky mimo virtuálneho prostredia.
 
-Ak `pip install` hlási `Defaulting to user installation`, balíky sa nainštalovali mimo virtuálneho prostredia. Príkazy `alembic` a `uvicorn` potom nemusia byť v PATH (`is not recognized`). Riešením je aktivovať `.venv` podľa kapitoly 3 alebo spúšťať nástroje cez `python -m alembic` a `python -m uvicorn`.
+Ak `pip install` hlási `Defaulting to user installation`, balíky sa nainštalovali mimo virtuálneho prostredia. Príkazy `alembic` a `uvicorn` potom nemusia byť v PATH (`is not recognized`). Riešením je aktivovať `.venv` podľa kapitoly 3 alebo spúšťať nástroje cez `.\.venv\Scripts\python.exe -m alembic` a `.\.venv\Scripts\python.exe -m uvicorn`.
 
 ## 2. Stiahnutie projektu
 
@@ -37,6 +90,8 @@ git pull origin main
 
 ## 3. Backend
 
+Backend spustite vo **vlastnom okne PowerShellu**. Posledný príkaz `uvicorn` okno obsadí. Okno nechajte otvorené a kapitolu 4 robte v novom okne.
+
 ```powershell
 cd C:\Apps\Dane_bu\backend
 py -m venv .venv
@@ -53,13 +108,15 @@ Backend vždy spúšťajte z priečinka `C:\Apps\Dane_bu\backend`. Cesta k datab
 
 Ak aktiváciu blokuje bezpečnostná politika, použite priamo `.\.venv\Scripts\python.exe` namiesto aktivácie. Ak sa zobrazí chyba `10048`, port 8000 už používa iný proces. Overte ho príkazom `Get-NetTCPConnection -LocalPort 8000 -State Listen`; použite už bežiaci server, zastavte príslušný proces cez `Stop-Process -Id <PID>`, alebo zvoľte iný port.
 
-Kontrola: `http://localhost:8000/health`. Očakávaná odpoveď je `{"status":"ok"}`.
+Kontrola: kým backend beží, otvorte v prehliadači `http://localhost:8000/health`. Očakávaná odpoveď je `{"status":"ok"}`. Ak sa stránka nenačíta, backend nebeží.
 
 ## 4. Frontend pre sieťový prístup
 
 Frontend volá backend na porte 8000 toho počítača, z ktorého sa stránka načítala (`window.location.hostname`). V `frontend/src/main.tsx` preto netreba nič upravovať. Pri otvorení `http://192.168.1.50:5173` sa backend volá na `http://192.168.1.50:8000`.
 
-Vytvorenie frontendu:
+Frontend spustite v **novom okne PowerShellu**. Okno s backendom z kapitoly 3 musí zostať otvorené. Na serveri sa frontend zostaví (`build`) a spustí cez `vite preview`. Príkaz `npm.cmd run dev` je určený iba na vývoj a na rýchle spustenie na jednom počítači.
+
+Vytvorenie a spustenie frontendu:
 
 ```powershell
 cd C:\Apps\Dane_bu\frontend
@@ -72,12 +129,14 @@ Produkčné súbory sú v `frontend\dist`. Pre trvalú prevádzku je vhodné ser
 
 ## 5. Prístup z bežného počítača
 
-Ak aplikáciu spustíte iba na adrese `127.0.0.1:5173`, bude dostupná len na serveri. Pre prístup z ostatných počítačov musí Vite počúvať na všetkých sieťových rozhraniach:
+Ak aplikáciu spustíte iba na adrese `127.0.0.1:5173`, bude dostupná len na serveri. Pre prístup z ostatných počítačov musí frontend počúvať na všetkých sieťových rozhraniach. Príkaz `vite preview --host 0.0.0.0` z kapitoly 4 to už zabezpečuje. Pri vývojovom spustení použite:
 
 ```powershell
 cd C:\Apps\Dane_bu\frontend
 npm.cmd run dev -- --host 0.0.0.0
 ```
+
+Spúšťajte iba jeden z týchto príkazov, oba používajú port 5173.
 
 Rovnako musí backend počúvať na všetkých sieťových rozhraniach:
 
@@ -162,7 +221,7 @@ Overte:
 
 1. `http://<server>:8000/health` vráti `{"status":"ok"}`.
 2. Aplikácia sa otvorí na serveri aj na inom počítači bez hlásenia „Backend nie je dostupný“.
-3. Vyhľadanie subjektu a uloženie bez duplicity fungujú.
+3. Vyhľadanie subjektu a uloženie bez duplicity fungujú. Subjekt sa dá uložiť aj bez IČO a DIČ, iba s menom a OÚD. Tlačidlo **Skopírovať rodné číslo a otvoriť overenie OÚD** otvorí formulár Finančnej správy.
 4. Pri DPH je splatnosť 25. deň nasledujúceho mesiaca, posunutá na pracovný deň (kapitola 14). Po vytvorení náhľadu sa zobrazí QR kód PAY by square. Naskenujte ho bankovou aplikáciou, ktorú používate, a porovnajte IBAN, sumu a variabilný symbol s náhľadom. QR kód sa vytvára vo formáte PAY by square 1.1.0 bez mena príjemcu, lebo formát 1.2.0 meno príjemcu vyžaduje. Podpora staršieho formátu sa môže líšiť podľa banky.
 5. Text e-mailu sa dá skopírovať.
 6. Údaje zostanú zachované po reštarte backendu.
@@ -262,6 +321,8 @@ Potom otvorte `http://127.0.0.1:8001/docs` a nahrajte CSV najprv cez `POST /subj
 | `'alembic'` / `'uvicorn' is not recognized` | balíky sú nainštalované mimo `.venv` a ich priečinok `Scripts` nie je v PATH | aktivujte `.venv` (kapitola 3) alebo použite `python -m alembic`, `python -m uvicorn` |
 | `[Errno 10048] ... only one usage of each socket address` | port 8000 už používa iný proces, často už bežiaci backend | `Get-NetTCPConnection -LocalPort 8000 -State Listen` zobrazí PID; buď použite bežiaci server, alebo ho zastavte cez `Stop-Process -Id <PID>` |
 | Backend beží, ale subjekty chýbajú | backend bol spustený z iného priečinka a používa inú `app.db` | zastavte ho a spustite z `C:\Apps\Dane_bu\backend` (kapitola 3) |
+| „Failed to fetch“ pri vyhľadaní alebo uložení subjektu | backend nebeží, najčastejšie preto, že sa jeho okno zatvorilo alebo sa zastavil cez Ctrl+C pri spúšťaní frontendu | v samostatnom okne spustite backend (kapitola 3 alebo **Rýchle spustenie**), overte `http://localhost:8000/health` a obnovte stránku |
+| Po aktualizácii sa v stránke neprejavia zmeny | `vite preview` zobrazuje naposledy zostavenú verziu, alebo backend a frontend bežia z rôznych priečinkov (napríklad `C:\Apps\Dane_bu` a iná kópia projektu) | po `git pull` spustite `npm.cmd run build` a reštartujte frontend; priečinok bežiacich častí zistíte príkazom `Get-NetTCPConnection -LocalPort 5173,8000 -State Listen \| ForEach-Object { (Get-CimInstance Win32_Process -Filter "ProcessId=$($_.OwningProcess)").CommandLine }`; obe časti spúšťajte z rovnakého priečinka, inak backend používa inú databázu |
 | „Backend nie je dostupný“, prázdny zoznam pravidiel | backend nebeží, frontend volá nesprávnu adresu alebo backend odmieta adresu stránky (CORS) | 1. otvorte `http://<server>:8000/health`; 2. v prehliadači stlačte F12 → **Console** a pozrite chybu; 3. pri CORS chybe doplňte adresu stránky do `CORS_ORIGINS` (kapitola 5) |
 | V konzole je adresa ako `:5173/$%7Bwindow.location...` | v staršej verzii bola adresa API v `main.tsx` zapísaná v úvodzovkách `"..."` namiesto spätných apostrofov `` `...` `` | aktualizujte na aktuálnu verziu (kapitola 9), ktorá úpravu `main.tsx` nepotrebuje |
 | Stránka sa na inom počítači neotvorí | Vite alebo backend počúvajú iba na tomto počítači, prípadne blokuje firewall | spúšťajte s `--host 0.0.0.0` (kapitola 5) a pridajte pravidlá firewallu (kapitola 6) |

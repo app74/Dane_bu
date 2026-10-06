@@ -58,3 +58,12 @@ def test_update_cannot_duplicate_another_subject(client):
     response = client.put(f"/subjects/{other['id']}", json=PAYLOAD)
     assert response.status_code == 409
     assert len(client.get("/subjects").json()) == 2
+
+
+def test_subject_without_ico_and_dic_can_be_saved(client):
+    response = client.post(
+        "/subjects", json={"name": "Fyzická osoba", "oud": "8026760002", "ico": None, "dic": None}
+    )
+    assert response.status_code == 201
+    assert response.json()["ico"] is None
+    assert response.json()["dic"] is None

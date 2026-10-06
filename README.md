@@ -12,7 +12,7 @@ Prvé vyhľadanie stiahne približne 65 MB a vytvorí lokálny index v dočasnom
 
 Zdroj a autor: [Finančné riaditeľstvo SR – exporty informačných zoznamov](https://www.financnasprava.sk/sk/danovi-a-colni-specialisti/technicke-informacie/podklady-pre-tvorcov-sw/exporty-informacnych-zoznamov). Register daňových subjektov je zverejnený pod CC0; export účtov pod **CC BY-NC-ND**, teda s obmedzením komerčného použitia. Táto integrácia nemení licenciu zdrojových dát. Na komerčné použitie treba zabezpečiť zodpovedajúce oprávnenie k dátam.
 
-Pri subjekte mimo exportu použite [ručné overenie OÚD na FS](https://www.financnasprava.sk/sk/elektronicke-sluzby/verejne-sluzby/overenie-prideleneho-oud). Aplikácia neautomatizuje tento formulár ani neobchádza CAPTCHA.
+Pri subjekte mimo exportu použite [ručné overenie OÚD na FS](https://www.financnasprava.sk/sk/elektronicke-sluzby/verejne-sluzby/overenie-prideleneho-oud). Aplikácia neautomatizuje tento formulár ani neobchádza CAPTCHA. Pre fyzickú osobu bez IČO a DIČ zadajte rodné číslo do poľa **Rodné číslo** a kliknite na **Skopírovať rodné číslo a otvoriť overenie OÚD**. Aplikácia skontroluje iba tvar rodného čísla, skopíruje ho do schránky a otvorí formulár FS. Nájdený OÚD zadajte do poľa **OÚD**. Rodné číslo sa neukladá ani neodosiela na backend.
 
 ## Spustenie bez Dockeru
 
